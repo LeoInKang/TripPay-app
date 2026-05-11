@@ -3,10 +3,26 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
 import SetupScreen from './screens/SetupScreen';
+import MainScreen  from './screens/MainScreen';
+import {
+  SAMPLE_TRIP, SAMPLE_DEPOSITS, SAMPLE_CHARGES,
+  SAMPLE_EXCHANGES, SAMPLE_EXPENSES
+} from './sampleData';
 
 const Stack = createNativeStackNavigator();
 
 function LandingScreen({ navigation }) {
+  // 개발용 샘플 데이터 바로 로드
+  const loadSample = () => {
+    navigation.navigate('Main', {
+      trip: SAMPLE_TRIP,
+      initialDeposits:  SAMPLE_DEPOSITS,
+      initialCharges:   SAMPLE_CHARGES,
+      initialExchanges: SAMPLE_EXCHANGES,
+      initialExpenses:  SAMPLE_EXPENSES,
+    });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -29,6 +45,10 @@ function LandingScreen({ navigation }) {
           <TouchableOpacity style={styles.btnSecondary}>
             <Text style={styles.btnSecondaryText}>📋 히스토리</Text>
           </TouchableOpacity>
+          {/* 개발용 */}
+          <TouchableOpacity style={styles.btnDev} onPress={loadSample}>
+            <Text style={styles.btnDevText}>🧪 샘플 데이터 로드 (개발용)</Text>
+          </TouchableOpacity>
         </View>
         <Text style={styles.version}>TripPay v1.0</Text>
       </View>
@@ -41,7 +61,8 @@ export default function App() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Landing" component={LandingScreen} />
-        <Stack.Screen name="Setup" component={SetupScreen} />
+        <Stack.Screen name="Setup"   component={SetupScreen} />
+        <Stack.Screen name="Main"    component={MainScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -61,5 +82,7 @@ const styles = StyleSheet.create({
   btnPrimaryText: { color: '#1a3a5c', fontSize: 16, fontWeight: '700' },
   btnSecondary: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
   btnSecondaryText: { color: '#ffffff', fontSize: 15, fontWeight: '500' },
+  btnDev: { backgroundColor: 'rgba(255,200,0,0.2)', borderRadius: 16, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,200,0,0.4)' },
+  btnDevText: { color: '#ffd700', fontSize: 13, fontWeight: '600' },
   version: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 16 },
 });

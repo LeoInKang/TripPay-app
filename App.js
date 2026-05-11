@@ -1,0 +1,65 @@
+import { NavigationContainer } from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
+import SetupScreen from './screens/SetupScreen';
+
+const Stack = createNativeStackNavigator();
+
+function LandingScreen({ navigation }) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar style="light" />
+      <View style={styles.background}>
+        <View style={styles.heroSection}>
+          <Text style={styles.planeEmoji}>✈️</Text>
+          <Text style={styles.logoText}>
+            <Text style={styles.logoTrip}>Trip</Text>
+            <Text style={styles.logoPay}>Pay</Text>
+          </Text>
+          <Text style={styles.tagline}>회비 납부부터 지출·정산까지{'\n'}단체 여행 공금 관리 한 번에</Text>
+        </View>
+        <View style={styles.buttonSection}>
+          <TouchableOpacity style={styles.btnPrimary} onPress={() => navigation.navigate('Setup')}>
+            <Text style={styles.btnPrimaryText}>✈ 새로운 여행 시작</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnSecondary}>
+            <Text style={styles.btnSecondaryText}>📂 여행 데이터 가져오기</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.btnSecondary}>
+            <Text style={styles.btnSecondaryText}>📋 히스토리</Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.version}>TripPay v1.0</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+export default function App() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Landing" component={LandingScreen} />
+        <Stack.Screen name="Setup" component={SetupScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#1a3a5c' },
+  background: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 60, paddingHorizontal: 24 },
+  heroSection: { alignItems: 'center', flex: 1, justifyContent: 'center' },
+  planeEmoji: { fontSize: 80, marginBottom: 16 },
+  logoText: { fontSize: 48, fontWeight: '800', marginBottom: 16 },
+  logoTrip: { color: '#ffffff', fontSize: 48, fontWeight: '800' },
+  logoPay: { color: '#64b4ff', fontSize: 48, fontWeight: '800' },
+  tagline: { color: 'rgba(255,255,255,0.75)', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  buttonSection: { width: '100%', gap: 12 },
+  btnPrimary: { backgroundColor: '#ffffff', borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
+  btnPrimaryText: { color: '#1a3a5c', fontSize: 16, fontWeight: '700' },
+  btnSecondary: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, paddingVertical: 18, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  btnSecondaryText: { color: '#ffffff', fontSize: 15, fontWeight: '500' },
+  version: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 16 },
+});

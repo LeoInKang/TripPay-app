@@ -1,0 +1,184 @@
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, ScrollView, SafeAreaView
+} from 'react-native';
+
+const COUNTRIES = [
+  { flag:'🇯🇵', name:'일본', code:'JPY', sym:'¥', r100:true },
+  { flag:'🇺🇸', name:'미국', code:'USD', sym:'$', r100:false },
+  { flag:'🇹🇭', name:'태국', code:'THB', sym:'฿', r100:false },
+  { flag:'🇻🇳', name:'베트남', code:'VND', sym:'₫', r100:false },
+  { flag:'🇪🇺', name:'유럽', code:'EUR', sym:'€', r100:false },
+  { flag:'🇬🇧', name:'영국', code:'GBP', sym:'£', r100:false },
+  { flag:'🇦🇺', name:'호주', code:'AUD', sym:'A$', r100:false },
+  { flag:'🇨🇳', name:'중국', code:'CNY', sym:'¥', r100:false },
+  { flag:'🇵🇭', name:'필리핀', code:'PHP', sym:'₱', r100:false },
+  { flag:'🇸🇬', name:'싱가포르', code:'SGD', sym:'S$', r100:false },
+];
+
+export default function SetupScreen({ navigation }) {
+  const [tripName, setTripName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [members, setMembers] = useState('');
+  const [selectedCountry, setSelectedCountry] = useState(null);
+  const [note, setNote] = useState('');
+
+  const handleStart = () => {
+    if (!tripName || !selectedCountry || !members) {
+      alert('여행명, 국가, 참석자를 입력해 주세요.');
+      return;
+    }
+    const trip = {
+      id: 'trip_' + Date.now(),
+      name: tripName,
+      startDate,
+      endDate,
+      country: selectedCountry,
+      members: members.split(',').map(m => m.trim()).filter(Boolean),
+      note,
+    };
+    navigation.navigate('Main', { trip });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.title}>새 여행 시작</Text>
+
+        {/* 여행명 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>여행명</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="예) 일본 골프투어"
+            value={tripName}
+            onChangeText={setTripName}
+          />
+        </View>
+
+        {/* 날짜 */}
+        <View style={styles.row}>
+          <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
+            <Text style={styles.label}>시작일</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="2024-09-22"
+              value={startDate}
+              onChangeText={setStartDate}
+            />
+          </View>
+          <View style={[styles.field, { flex: 1 }]}>
+            <Text style={styles.label}>종료일</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="2024-09-28"
+              value={endDate}
+              onChangeText={setEndDate}
+            />
+          </View>
+        </View>
+
+        {/* 국가 선택 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>여행 국가</Text>
+          <View style={styles.countryGrid}>
+            {COUNTRIES.map(c => (
+              <TouchableOpacity
+                key={c.code}
+                style={[styles.countryBtn, selectedCountry?.code === c.code && styles.countryBtnSelected]}
+                onPress={() => setSelectedCountry(c)}
+              >
+                <Text style={styles.countryFlag}>{c.flag}</Text>
+                <Text style={[styles.countryName, selectedCountry?.code === c.code && styles.countryNameSelected]}>
+                  {c.name}
+                </Text>
+                <Text style={[styles.countryCur, selectedCountry?.code === c.code && styles.countryCurSelected]}>
+                  {c.code} {c.sym}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* 참석자 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>참석자 (쉼표로 구분)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="홍길동, 김철수, 이영희"
+            value={members}
+            onChangeText={setMembers}
+          />
+        </View>
+
+        {/* 메모 */}
+        <View style={styles.field}>
+          <Text style={styles.label}>메모 (선택)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="야마구치현 골프"
+            value={note}
+            onChangeText={setNote}
+          />
+        </View>
+
+        {/* 시작 버튼 */}
+        <TouchableOpacity style={styles.btnStart} onPress={handleStart}>
+          <Text style={styles.btnStartText}>✈ 여행 시작</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f5f5f0' },
+  scroll: { padding: 20, paddingBottom: 40 },
+  title: { fontSize: 24, fontWeight: '800', color: '#1a3a5c', marginBottom: 24 },
+  field: { marginBottom: 16 },
+  row: { flexDirection: 'row', marginBottom: 0 },
+  label: { fontSize: 13, fontWeight: '600', color: '#6b6b6b', marginBottom: 6 },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.15)',
+    padding: 12,
+    fontSize: 15,
+    color: '#1a1a1a',
+  },
+  countryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  countryBtn: {
+    width: '30%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.15)',
+    padding: 10,
+    alignItems: 'center',
+  },
+  countryBtnSelected: {
+    backgroundColor: '#e6f1fb',
+    borderColor: '#2563a8',
+    borderWidth: 1.5,
+  },
+  countryFlag: { fontSize: 24, marginBottom: 2 },
+  countryName: { fontSize: 12, fontWeight: '600', color: '#1a1a1a' },
+  countryNameSelected: { color: '#0c447c' },
+  countryCur: { fontSize: 10, color: '#9b9b9b', marginTop: 1 },
+  countryCurSelected: { color: '#2563a8' },
+  btnStart: {
+    backgroundColor: '#1a3a5c',
+    borderRadius: 14,
+    paddingVertical: 18,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  btnStartText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+});

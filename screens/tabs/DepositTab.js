@@ -3,8 +3,9 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView
 } from 'react-native';
-import Dropdown  from '../../components/Dropdown';
-import DateField from '../../components/DateField';
+import BottomSheet from '../../components/BottomSheet';
+import Segment     from '../../components/Segment';
+import DateField   from '../../components/DateField';
 
 export default function DepositTab({ trip, deposits, setDeposits }) {
   const [member,   setMember]   = useState(trip.members[0]);
@@ -20,8 +21,8 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
 
   const memberOptions = trip.members.map(m => ({ value: m, label: m }));
   const currencyOptions = [
-    { value: 'KRW',   label: '원화(₩)' },
-    { value: 'LOCAL', label: `외화(${sym})` },
+    { value: 'KRW',   label: `원화 ₩` },
+    { value: 'LOCAL', label: `외화 ${sym}` },
   ];
 
   const handleAmtChange = (v) => {
@@ -67,15 +68,28 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* 입력 폼 */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>회비 납부</Text>
 
+        {/* 1줄: 참석자(바텀시트) | 통화(세그먼트) | 회비(입력) */}
         <View style={styles.formRow}>
           <View style={styles.col}>
-            <Dropdown label="참석자" value={member} options={memberOptions} onChange={setMember} />
+            <BottomSheet
+              label="참석자"
+              value={member}
+              options={memberOptions}
+              onChange={setMember}
+              title="참석자 선택"
+            />
           </View>
-          <View style={styles.col}>
-            <Dropdown label="통화" value={currency} options={currencyOptions} onChange={setCurrency} />
+          <View style={[styles.col, { flex: 1.3 }]}>
+            <Segment
+              label="통화"
+              value={currency}
+              options={currencyOptions}
+              onChange={setCurrency}
+            />
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>{currency === 'KRW' ? '회비(원)' : `회비(${sym})`}</Text>
@@ -89,6 +103,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
           </View>
         </View>
 
+        {/* 외화 시: 환율 + 원화환산 */}
         {currency === 'LOCAL' && (
           <View style={styles.formRow}>
             <View style={styles.col}>
@@ -113,21 +128,28 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
           </View>
         )}
 
+        {/* 2줄: 날짜(캘린더) | 메모 */}
         <View style={styles.formRow}>
           <View style={styles.col}>
             <DateField label="날짜" value={date} onChange={setDate} />
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>메모</Text>
-            <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+            <TextInput
+              style={styles.input}
+              placeholder="선택"
+              value={note}
+              onChangeText={setNote}
+            />
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+        <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
           <Text style={styles.addBtnText}>+ 회비납부</Text>
         </TouchableOpacity>
       </View>
 
+      {/* 회비 납부내역 */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>회비 납부내역</Text>
 

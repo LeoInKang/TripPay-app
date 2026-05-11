@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView
 } from 'react-native';
+import BottomSheet from '../../components/BottomSheet';
 
 export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const [filterDate, setFilterDate] = useState('all');
-  const [filterPay, setFilterPay] = useState('all');
+  const [filterPay, setFilterPay]   = useState('all');
   const sym = trip.country.sym;
 
   const allItems = [
@@ -14,12 +15,25 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
   ].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   // 필터 옵션 추출
-  const dates = ['all', ...new Set(allItems.map(i => i.date).filter(Boolean))];
-  const pays = ['all', ...new Set(allItems.filter(i => i.pay).map(i => i.pay))];
+  const uniqueDates = [...new Set(allItems.map(i => i.date).filter(Boolean))].sort();
+  const uniquePays  = [...new Set(allItems.filter(i => i.pay).map(i => i.pay))];
+
+  const dateOptions = [
+    { value: 'all', label: '전체 날짜' },
+    ...uniqueDates.map(d => ({ value: d, label: d })),
+  ];
+  const payOptions = [
+    { value: 'all', label: '전체 결제수단' },
+    ...uniquePays.map(p => ({ value: p, label: p })),
+    { value: 'krw', label: '원화 지출' },
+  ];
 
   const filtered = allItems.filter(item => {
     if (filterDate !== 'all' && item.date !== filterDate) return false;
-    if (filterPay !== 'all' && item.pay !== filterPay) return false;
+    if (filterPay !== 'all') {
+      if (filterPay === 'krw' && item.type !== 'krw') return false;
+      if (filterPay !== 'krw' && item.pay !== filterPay) return false;
+    }
     return true;
   });
 
@@ -33,36 +47,26 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
 
   return (
     <View style={styles.container}>
-      {/* 필터 */}
+      {/* 필터 바 */}
       <View style={styles.filterBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          <Text style={styles.filterLabel}>날짜:</Text>
-          {dates.map(d => (
-            <TouchableOpacity
-              key={d}
-              style={[styles.filterChip, filterDate === d && styles.filterChipActive]}
-              onPress={() => setFilterDate(d)}
-            >
-              <Text style={[styles.filterChipText, filterDate === d && styles.filterChipTextActive]}>
-                {d === 'all' ? '전체' : d}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
-          <Text style={styles.filterLabel}>결제:</Text>
-          {pays.map(p => (
-            <TouchableOpacity
-              key={p}
-              style={[styles.filterChip, filterPay === p && styles.filterChipActive]}
-              onPress={() => setFilterPay(p)}
-            >
-              <Text style={[styles.filterChipText, filterPay === p && styles.filterChipTextActive]}>
-                {p === 'all' ? '전체' : p}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        <View style={styles.filterCol}>
+          <BottomSheet
+            label="날짜"
+            value={filterDate}
+            options={dateOptions}
+            onChange={setFilterDate}
+            title="날짜 선택"
+          />
+        </View>
+        <View style={styles.filterCol}>
+          <BottomSheet
+            label="결제수단"
+            value={filterPay}
+            options={payOptions}
+            onChange={setFilterPay}
+            title="결제수단 선택"
+          />
+        </View>
       </View>
 
       <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
@@ -88,7 +92,7 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
                   )}
                 </View>
                 <Text style={styles.sub}>
-                  {item.date}{item.pay ? ' · ' + item.pay : item.payer === '공통' ? '' : ''}
+                  {item.date}{item.pay ? ' · ' + item.pay : ''}
                   {item.note ? ' · ' + item.note : ''}
                 </Text>
               </View>
@@ -112,23 +116,15 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0eee8' },
 
   filterBar: {
+    flexDirection: 'row',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     backgroundColor: '#fff',
-    paddingVertical: 8,
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(0,0,0,0.08)',
   },
-  filterScroll: { paddingHorizontal: 12, marginBottom: 4 },
-  filterLabel: { fontSize: 11, color: '#9b9b9b', marginRight: 6, alignSelf: 'center' },
-  filterChip: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 4,
-  },
-  filterChipActive: { backgroundColor: '#1a3a5c' },
-  filterChipText: { fontSize: 11, color: '#6b6b6b' },
-  filterChipTextActive: { color: '#fff', fontWeight: '600' },
+  filterCol: { flex: 1 },
 
   list: { flex: 1 },
   listContent: { padding: 12, paddingBottom: 32 },

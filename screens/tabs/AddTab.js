@@ -3,6 +3,9 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView
 } from 'react-native';
+import Segment     from '../../components/Segment';
+import BottomSheet from '../../components/BottomSheet';
+import DateField   from '../../components/DateField';
 
 export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const sym = trip.country.sym;
@@ -10,7 +13,6 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 외화 지출 폼 */}
       <FxExpenseForm
         trip={trip}
         expenses={expenses}
@@ -18,7 +20,6 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
         sym={sym}
         payMethods={payMethods}
       />
-      {/* 원화 지출 폼 */}
       <KrwExpenseForm
         trip={trip}
         krwExps={krwExps}
@@ -29,12 +30,15 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
 }
 
 function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
-  const [name, setName] = useState('');
-  const [amt, setAmt] = useState('');
-  const [pay, setPay] = useState(payMethods[0]);
-  const [date, setDate] = useState('');
+  const [name,  setName]  = useState('');
+  const [amt,   setAmt]   = useState('');
+  const [pay,   setPay]   = useState(payMethods[0]);
+  const [date,  setDate]  = useState('');
   const [payer, setPayer] = useState('공통');
-  const [note, setNote] = useState('');
+  const [note,  setNote]  = useState('');
+
+  const payOptions = payMethods.map(m => ({ value: m, label: m }));
+  const payerOptions = ['공통', ...trip.members].map(m => ({ value: m, label: m }));
 
   const handleAdd = () => {
     if (!name || !amt) return;
@@ -54,6 +58,7 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
     <View style={styles.card}>
       <Text style={styles.cardTitle}>💱 외화 지출</Text>
 
+      {/* 1줄: 항목명 (단독) */}
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>항목명</Text>
@@ -66,6 +71,7 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
         </View>
       </View>
 
+      {/* 2줄: 금액 | 결제수단 (Segment) */}
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>금액({sym})</Text>
@@ -77,53 +83,46 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
             onChangeText={setAmt}
           />
         </View>
-        <View style={styles.col}>
-          <Text style={styles.label}>결제수단</Text>
-          <View style={styles.chipRow}>
-            {payMethods.map(m => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.chip, pay === m && styles.chipActive]}
-                onPress={() => setPay(m)}
-              >
-                <Text style={[styles.chipText, pay === m && styles.chipTextActive]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+        <View style={[styles.col, { flex: 1.3 }]}>
+          <Segment
+            label="결제수단"
+            value={pay}
+            options={payOptions}
+            onChange={setPay}
+          />
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>날짜 · 결제자 · 메모</Text>
-
+      {/* 3줄: 날짜 | 결제자(BottomSheet) */}
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>결제자</Text>
-          <View style={styles.chipRow}>
-            {['공통', ...trip.members].map(m => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.chip, payer === m && styles.chipActive]}
-                onPress={() => setPayer(m)}
-              >
-                <Text style={[styles.chipText, payer === m && styles.chipTextActive]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <BottomSheet
+            label="결제자"
+            value={payer}
+            options={payerOptions}
+            onChange={setPayer}
+            title="결제자 선택"
+          />
         </View>
       </View>
 
+      {/* 4줄: 메모 */}
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>메모</Text>
-          <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+          <TextInput
+            style={styles.input}
+            placeholder="선택"
+            value={note}
+            onChangeText={setNote}
+          />
         </View>
       </View>
 
-      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 외화지출</Text>
       </TouchableOpacity>
     </View>
@@ -131,11 +130,13 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
 }
 
 function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
-  const [name, setName] = useState('');
-  const [amt, setAmt] = useState('');
-  const [date, setDate] = useState('');
+  const [name,  setName]  = useState('');
+  const [amt,   setAmt]   = useState('');
+  const [date,  setDate]  = useState('');
   const [payer, setPayer] = useState('공통');
-  const [note, setNote] = useState('');
+  const [note,  setNote]  = useState('');
+
+  const payerOptions = ['공통', ...trip.members].map(m => ({ value: m, label: m }));
 
   const handleAdd = () => {
     if (!name || !amt) return;
@@ -176,26 +177,18 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
         </View>
       </View>
 
-      <Text style={styles.sectionLabel}>결제자 · 메모</Text>
-
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>결제자</Text>
-          <View style={styles.chipRow}>
-            {['공통', ...trip.members].map(m => (
-              <TouchableOpacity
-                key={m}
-                style={[styles.chip, payer === m && styles.chipActive]}
-                onPress={() => setPayer(m)}
-              >
-                <Text style={[styles.chipText, payer === m && styles.chipTextActive]}>{m}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <BottomSheet
+            label="결제자"
+            value={payer}
+            options={payerOptions}
+            onChange={setPayer}
+            title="결제자 선택"
+          />
         </View>
       </View>
 
@@ -206,7 +199,7 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
         </View>
       </View>
 
-      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 원화지출</Text>
       </TouchableOpacity>
     </View>
@@ -236,27 +229,9 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.15)',
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 9,
     fontSize: 14,
   },
-
-  sectionLabel: {
-    fontSize: 11,
-    color: '#9b9b9b',
-    marginTop: 6,
-    marginBottom: 4,
-  },
-
-  chipRow: { flexDirection: 'row', gap: 4, flexWrap: 'wrap' },
-  chip: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 14,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  chipActive: { backgroundColor: '#1a3a5c' },
-  chipText: { fontSize: 11, color: '#6b6b6b' },
-  chipTextActive: { color: '#fff', fontWeight: '600' },
 
   addBtn: {
     backgroundColor: '#1a1a1a',

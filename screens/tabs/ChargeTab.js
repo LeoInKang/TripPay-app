@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView
 } from 'react-native';
+import DateField from '../../components/DateField';
 
 const SUB_TABS = [
   { id: 'charge',   icon: '💳', label: '카드충전' },
@@ -28,12 +29,14 @@ export default function ChargeTab({
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* 서브 탭 */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabScroll}>
         {SUB_TABS.map(t => (
           <TouchableOpacity
             key={t.id}
             style={[styles.subTab, subTab === t.id && styles.subTabActive]}
             onPress={() => setSubTab(t.id)}
+            activeOpacity={0.7}
           >
             <Text style={styles.subTabIcon}>{t.icon}</Text>
             <Text style={[styles.subTabText, subTab === t.id && styles.subTabTextActive]}>
@@ -48,6 +51,7 @@ export default function ChargeTab({
       {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, sym }} />}
       {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, sym, r100 }} />}
 
+      {/* 전체 내역 */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>충전 / 환전 / ATM / 계좌이전 내역</Text>
         {charges.length + exchanges.length + atms.length + refunds.length === 0 ? (
@@ -148,8 +152,7 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate }) {
           <TextInput style={styles.input} placeholder="930.00" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -158,7 +161,7 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate }) {
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
-      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 충전</Text>
       </TouchableOpacity>
     </View>
@@ -206,8 +209,7 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate }) {
           <TextInput style={styles.input} placeholder="930.00" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -216,7 +218,7 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate }) {
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
-      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 환전</Text>
       </TouchableOpacity>
     </View>
@@ -251,8 +253,7 @@ function AtmForm({ trip, atms, setAtms, sym }) {
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={setLocal} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -261,7 +262,7 @@ function AtmForm({ trip, atms, setAtms, sym }) {
           <TextInput style={styles.input} placeholder="ATM 수수료는 별도 지출로 입력" value={note} onChangeText={setNote} />
         </View>
       </View>
-      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ ATM인출</Text>
       </TouchableOpacity>
     </View>
@@ -329,8 +330,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100 }) {
           <TextInput style={styles.input} placeholder="자동" keyboardType="decimal-pad" value={rate} onChangeText={handleRate} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -339,7 +339,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100 }) {
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
-      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 카드 잔액 이전</Text>
       </TouchableOpacity>
     </View>
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.15)',
     paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingVertical: 9,
     fontSize: 14,
   },
   addBtn: {

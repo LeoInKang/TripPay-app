@@ -11,7 +11,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
 
-  const totalDeposit = deposits.reduce((s, d) => s + d.krwEquiv || d.amt || 0, 0);
+  const totalDeposit = deposits.reduce((s, d) => s + (d.krwEquiv || d.amt || 0), 0);
 
   const handleAdd = () => {
     if (!amount) return;
@@ -53,7 +53,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
                 <Text style={styles.rowName}>{d.mem}</Text>
                 <Text style={styles.rowSub}>{d.date}{d.note ? ' · ' + d.note : ''}</Text>
               </View>
-              <Text style={styles.rowAmt}>{d.krwEquiv || d.amt || 0.toLocaleString('ko-KR')}원</Text>
+              <Text style={styles.rowAmt}>{(d.krwEquiv || d.amt || 0).toLocaleString('ko-KR')}원</Text>
             </View>
           ))
         )}

@@ -15,18 +15,20 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   const cardSpent   = expenses.filter(e => e.pay !== '현금').reduce((s,e) => s+e.amt, 0);
   const cardBal     = cardCharged - cardSpent;
 
-  // 현금 잔액 = 환전합계 + ATM합계 - 현금결제합계
-  const cashIn    = exchanges.reduce((s,e) => s+e.local, 0) + (atms||[]).reduce((s,a) => s+a.local, 0);
+  // 현금 잔액 = 환전합계 + ATM합계 + LOCAL 회비납부 - 현금결제합계
+  const localDeposits = deposits.filter(d => d.cur === 'LOCAL').reduce((s,d) => s+(d.amt||0), 0);
+  const cashIn    = exchanges.reduce((s,e) => s+e.local, 0) + (atms||[]).reduce((s,a) => s+a.local, 0) + localDeposits;
   const cashSpent = expenses.filter(e => e.pay === '현금').reduce((s,e) => s+e.amt, 0);
   const cashBal   = cashIn - cashSpent;
 
-  // 계좌 잔액 = 총입금(krwEquiv) - 충전krw - 환전krw - 원화지출 + 환급krw
-  const totalDepKrw    = deposits.reduce((s,d) => s+(d.krwEquiv||0), 0);
+  // 계좌 잔액 = 원화입금만 - 충전krw - 환전krw - 원화지출 + 환급krw
+  const totalKrwDeposit = deposits.filter(d => d.cur !== 'LOCAL').reduce((s,d) => s+(d.krwEquiv||d.amt||0), 0);
+  const totalDepKrw     = deposits.reduce((s,d) => s+(d.krwEquiv||0), 0);  // 총입금(표시용)
   const totalCharged   = charges.reduce((s,c) => s+c.krw, 0);
   const totalExchanged = exchanges.reduce((s,e) => s+e.krw, 0);
   const totalKrwExp    = krwExps.reduce((s,e) => s+e.amt, 0);
   const refundKrw      = (refunds||[]).reduce((s,r) => s+(r.krw||0), 0);
-  const acctBal        = totalDepKrw - totalCharged - totalExchanged - totalKrwExp + refundKrw;
+  const acctBal        = totalKrwDeposit - totalCharged - totalExchanged - totalKrwExp + refundKrw;
 
   // 총 지출
   const totalFxAmt = expenses.reduce((s,e) => s+e.amt, 0);
@@ -102,12 +104,24 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
                     <Text style={styles.dotText}>{_dotIcon(item.type)}</Text>
                   </View>
                   <View style={styles.rowInfo}>
-                    <Text style={styles.rowName}>{_itemName(item)}</Text>
+                    <View style={styles.rowNameLine}>
+                      <Text style={styles.rowName}>{_itemName(item)}</Text>
+                      {item.type==='deposit' && item.cur==='LOCAL' && (
+                        <View style={styles.badge}>
+                          <Text style={styles.badgeText}>{trip.country.code}</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={styles.rowSub}>{_itemSub(item, sym)}</Text>
                   </View>
-                  <Text style={[styles.rowAmt, { color: _amtColor(item.type) }]}>
-                    {_itemAmt(item, sym)}
-                  </Text>
+                  <View style={styles.rowAmtBox}>
+                    <Text style={[styles.rowAmt, { color: _amtColor(item.type) }]}>
+                      {_itemAmt(item, sym)}
+                    </Text>
+                    {item.type==='deposit' && item.cur==='LOCAL' && (
+                      <Text style={styles.rowAmtKrw}>≈₩{(item.krwEquiv||0).toLocaleString('ko-KR')}</Text>
+                    )}
+                  </View>
                 </View>
               ))}
             </View>
@@ -133,12 +147,15 @@ function _itemName(item) {
 function _itemSub(item, sym) {
   if(item.type==='charge')   return `₩${item.krw?.toLocaleString('ko-KR')} → ${sym}${item.local?.toLocaleString('ko-KR')} · 환율 ${item.rate}`;
   if(item.type==='exchange') return `₩${item.krw?.toLocaleString('ko-KR')} → ${sym}${item.local?.toLocaleString('ko-KR')} · 환율 ${item.rate}`;
-  if(item.type==='deposit')  return item.cur==='LOCAL' ? `${sym}${item.amt?.toLocaleString('ko-KR')} · 엔화납부` : '원화 회비납부';
+  if(item.type==='deposit')  return item.cur==='LOCAL' ? '외화 회비납부' : '원화 회비납부';
   if(item.type==='krwexp')   return `${item.payer} · 계좌 직접 차감`;
   return item.pay || '';
 }
 function _itemAmt(item, sym) {
-  if(item.type==='deposit')  return `+₩${(item.krwEquiv||0).toLocaleString('ko-KR')}`;
+  if(item.type==='deposit') {
+    if(item.cur === 'LOCAL') return `${sym}${(item.amt||0).toLocaleString('ko-KR')}`;
+    return `+₩${(item.krwEquiv||item.amt||0).toLocaleString('ko-KR')}`;
+  }
   if(item.type==='charge')   return `${sym}${item.local?.toLocaleString('ko-KR')}`;
   if(item.type==='exchange') return `${sym}${item.local?.toLocaleString('ko-KR')}`;
   if(item.type==='expense')  return `-${sym}${item.amt?.toLocaleString('ko-KR')}`;
@@ -170,7 +187,12 @@ const styles = StyleSheet.create({
   dot: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   dotText: { fontSize: 14 },
   rowInfo: { flex: 1 },
+  rowNameLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   rowName: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
   rowSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
+  badge: { backgroundColor: '#e8e6ff', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeText: { fontSize: 9, fontWeight: '700', color: '#5044a8' },
+  rowAmtBox: { alignItems: 'flex-end' },
   rowAmt: { fontSize: 13, fontWeight: '700' },
+  rowAmtKrw: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
 });

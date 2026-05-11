@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
+import {
+  View, Text, TouchableOpacity, StyleSheet,
+  SafeAreaView, ScrollView
+} from 'react-native';
 import HomeTab    from './tabs/HomeTab';
 import DepositTab from './tabs/DepositTab';
 import ChargeTab  from './tabs/ChargeTab';
@@ -11,12 +14,12 @@ const TABS = [
   { id: 'home',    icon: '🏠', label: '현황' },
   { id: 'deposit', icon: '💰', label: '회비' },
   { id: 'charge',  icon: '💳', label: '충전/환전' },
-  { id: 'add',     icon: '📝', label: '지출' },
+  { id: 'add',     icon: '➕', label: '지출' },
   { id: 'list',    icon: '📋', label: '내역' },
-  { id: 'settle',  icon: '📊', label: '정산' },
+  { id: 'settle',  icon: '🧾', label: '정산' },
 ];
 
-export default function MainScreen({ route }) {
+export default function MainScreen({ route, navigation }) {
   const { trip, initialDeposits=[], initialCharges=[], initialExchanges=[], initialExpenses=[] } = route.params;
   const [activeTab, setActiveTab] = useState('home');
 
@@ -34,6 +37,17 @@ export default function MainScreen({ route }) {
     setExpenses, setKrwExps,
   };
 
+  // 날짜 표시: 2026년 5/5 – 5/8 · 3박4일
+  const formatDateRange = () => {
+    const sd = trip.startDate, ed = trip.endDate;
+    if (!sd || !ed) return '';
+    const yr = sd.slice(0, 4);
+    const sm = parseInt(sd.slice(5,7)) + '/' + parseInt(sd.slice(8,10));
+    const em = parseInt(ed.slice(5,7)) + '/' + parseInt(ed.slice(8,10));
+    const nights = Math.round((new Date(ed) - new Date(sd)) / 86400000);
+    return `${yr}년 ${sm} – ${em} · ${nights}박${nights+1}일`;
+  };
+
   const renderTab = () => {
     switch(activeTab) {
       case 'home':    return <HomeTab    {...sharedProps} />;
@@ -48,34 +62,141 @@ export default function MainScreen({ route }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>{trip.country.flag} {trip.name}</Text>
-        <Text style={styles.headerSub}>{trip.members.join(' · ')} · {trip.startDate} ~ {trip.endDate}</Text>
+      {/* 상단 헤더: TripPay · 여행명 | 설정 | 히스토리 | 홈 */}
+      <View style={styles.topBar}>
+        <View style={styles.topBarLeft}>
+          <Text style={styles.brandText}>
+            <Text style={styles.brandTrip}>Trip</Text>
+            <Text style={styles.brandPay}>Pay</Text>
+          </Text>
+          <Text style={styles.brandDot}> · </Text>
+          <Text style={styles.tripTitle}>{trip.name}</Text>
+        </View>
+        <View style={styles.topBarRight}>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Text style={styles.iconBtnText}>⚙ 설정</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.iconBtn}>
+            <Text style={styles.iconBtnText}>📋 히스토리</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.iconBtn}
+            onPress={() => navigation.navigate('Landing')}
+          >
+            <Text style={styles.iconBtnText}>🏠 홈</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-      <View style={styles.content}>{renderTab()}</View>
-      <View style={styles.tabBar}>
+
+      {/* 정보 라인 */}
+      <View style={styles.infoBar}>
+        <Text style={styles.infoLine1}>
+          {formatDateRange()}{trip.note ? ' · ' + trip.note : ''}
+        </Text>
+        <Text style={styles.infoLine2}>
+          참석: {trip.members.join(', ')}
+        </Text>
+      </View>
+
+      {/* 상단 탭바 (가로 스크롤 가능) */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabBarScroll}
+        contentContainerStyle={styles.tabBarContent}
+      >
         {TABS.map(t => (
-          <TouchableOpacity key={t.id} style={styles.tabItem} onPress={() => setActiveTab(t.id)}>
+          <TouchableOpacity
+            key={t.id}
+            style={[styles.tabItem, activeTab === t.id && styles.tabItemActive]}
+            onPress={() => setActiveTab(t.id)}
+          >
             <Text style={styles.tabIcon}>{t.icon}</Text>
-            <Text style={[styles.tabLabel, activeTab === t.id && styles.tabLabelActive]}>{t.label}</Text>
-            {activeTab === t.id && <View style={styles.tabIndicator} />}
+            <Text style={[styles.tabLabel, activeTab === t.id && styles.tabLabelActive]}>
+              {t.label}
+            </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
+
+      {/* 탭 컨텐츠 */}
+      <View style={styles.content}>{renderTab()}</View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f0' },
-  header: { backgroundColor: '#1a3a5c', paddingHorizontal: 20, paddingVertical: 12 },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '700' },
-  headerSub: { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 },
-  content: { flex: 1 },
-  tabBar: { flexDirection: 'row', backgroundColor: '#fff', borderTopWidth: 0.5, borderTopColor: 'rgba(0,0,0,0.1)', paddingBottom: 8 },
-  tabItem: { flex: 1, alignItems: 'center', paddingTop: 8, position: 'relative' },
-  tabIcon: { fontSize: 18 },
-  tabLabel: { fontSize: 9, color: '#9b9b9b', marginTop: 1 },
-  tabLabelActive: { color: '#1a3a5c', fontWeight: '700' },
-  tabIndicator: { position: 'absolute', top: 0, width: 24, height: 2, backgroundColor: '#1a3a5c', borderRadius: 1 },
+  container: { flex: 1, backgroundColor: '#f0eee8' },
+
+  // 상단 헤더 (TripPay 브랜드 + 설정/히스토리/홈)
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    backgroundColor: '#f0eee8',
+  },
+  topBarLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  topBarRight: { flexDirection: 'row', gap: 6 },
+  brandText: { fontSize: 18, fontWeight: '800' },
+  brandTrip: { color: '#1a3a5c' },
+  brandPay:  { color: '#378ADD' },
+  brandDot:  { color: '#9b9b9b', fontSize: 14 },
+  tripTitle: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', flexShrink: 1 },
+  iconBtn: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  iconBtnText: { fontSize: 11, color: '#1a1a1a', fontWeight: '500' },
+
+  // 정보 라인 (날짜 · 메모 / 참석자)
+  infoBar: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 12,
+    backgroundColor: '#f0eee8',
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
+  },
+  infoLine1: { fontSize: 13, color: '#6b6b6b', marginBottom: 3 },
+  infoLine2: { fontSize: 13, color: '#6b6b6b' },
+
+  // 상단 탭바
+  tabBarScroll: {
+    backgroundColor: '#f0eee8',
+    maxHeight: 64,
+    flexGrow: 0,
+  },
+  tabBarContent: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+    alignItems: 'center',
+  },
+  tabItem: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'transparent',
+    minWidth: 64,
+  },
+  tabItemActive: {
+    backgroundColor: '#fff',
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  tabIcon: { fontSize: 18, marginBottom: 2 },
+  tabLabel: { fontSize: 11, color: '#9b9b9b', fontWeight: '500' },
+  tabLabelActive: { color: '#1a1a1a', fontWeight: '700' },
+
+  // 컨텐츠
+  content: { flex: 1, backgroundColor: '#f0eee8' },
 });

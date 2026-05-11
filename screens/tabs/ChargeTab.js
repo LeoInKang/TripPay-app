@@ -1,179 +1,414 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, Modal
+  StyleSheet, ScrollView
 } from 'react-native';
 
-const MODE = [
-  { id: 'charge',   label: '카드 충전', icon: '💳' },
-  { id: 'exchange', label: '현금 환전', icon: '💵' },
+const SUB_TABS = [
+  { id: 'charge',   icon: '💳', label: '카드충전' },
+  { id: 'exchange', icon: '🔄', label: '현금환전' },
+  { id: 'atm',      icon: '🏧', label: 'ATM인출' },
+  { id: 'refund',   icon: '↩', label: '카드잔액이전' },
 ];
 
-export default function ChargeTab({ trip, charges, exchanges, setCharges, setExchanges }) {
-  const [showForm, setShowForm] = useState(false);
-  const [mode, setMode] = useState('charge');
+export default function ChargeTab({
+  trip, charges, exchanges, atms, refunds,
+  setCharges, setExchanges, setAtms, setRefunds
+}) {
+  const [subTab, setSubTab] = useState('charge');
+  const sym = trip.country.sym;
+  const r100 = trip.country.r100;
+
+  const calcRate = (krw, local) => {
+    const k = parseInt((krw || '').replace(/,/g, '')) || 0;
+    const l = parseInt((local || '').replace(/,/g, '')) || 0;
+    if (!k || !l) return '';
+    return (r100 ? (k / l * 100) : (k / l)).toFixed(2);
+  };
+
+  return (
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabScroll}>
+        {SUB_TABS.map(t => (
+          <TouchableOpacity
+            key={t.id}
+            style={[styles.subTab, subTab === t.id && styles.subTabActive]}
+            onPress={() => setSubTab(t.id)}
+          >
+            <Text style={styles.subTabIcon}>{t.icon}</Text>
+            <Text style={[styles.subTabText, subTab === t.id && styles.subTabTextActive]}>
+              {t.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, sym, r100, calcRate }} />}
+      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, sym, r100, calcRate }} />}
+      {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, sym }} />}
+      {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, sym, r100 }} />}
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>충전 / 환전 / ATM / 계좌이전 내역</Text>
+        {charges.length + exchanges.length + atms.length + refunds.length === 0 ? (
+          <Text style={styles.empty}>없습니다</Text>
+        ) : (
+          <>
+            {charges.map(c => (
+              <View key={'c-' + c.id} style={styles.itemRow}>
+                <Text style={styles.itemIcon}>💳</Text>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>카드 충전</Text>
+                  <Text style={styles.itemSub}>
+                    {c.date} · ₩{c.krw.toLocaleString('ko-KR')} → {sym}{c.local.toLocaleString('ko-KR')} · 환율 {c.rate}
+                  </Text>
+                </View>
+                <Text style={styles.itemAmt}>{sym}{c.local.toLocaleString('ko-KR')}</Text>
+              </View>
+            ))}
+            {exchanges.map(e => (
+              <View key={'e-' + e.id} style={styles.itemRow}>
+                <Text style={styles.itemIcon}>🔄</Text>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>현금 환전</Text>
+                  <Text style={styles.itemSub}>
+                    {e.date} · ₩{e.krw.toLocaleString('ko-KR')} → {sym}{e.local.toLocaleString('ko-KR')} · 환율 {e.rate}
+                  </Text>
+                </View>
+                <Text style={styles.itemAmt}>{sym}{e.local.toLocaleString('ko-KR')}</Text>
+              </View>
+            ))}
+            {atms.map(a => (
+              <View key={'a-' + a.id} style={styles.itemRow}>
+                <Text style={styles.itemIcon}>🏧</Text>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>ATM 인출</Text>
+                  <Text style={styles.itemSub}>{a.date}{a.note ? ' · ' + a.note : ''}</Text>
+                </View>
+                <Text style={styles.itemAmt}>{sym}{a.local.toLocaleString('ko-KR')}</Text>
+              </View>
+            ))}
+            {refunds.map(r => (
+              <View key={'r-' + r.id} style={styles.itemRow}>
+                <Text style={styles.itemIcon}>↩</Text>
+                <View style={styles.itemInfo}>
+                  <Text style={styles.itemName}>카드 잔액 이전</Text>
+                  <Text style={styles.itemSub}>
+                    {r.date} · {sym}{r.local.toLocaleString('ko-KR')} → ₩{(r.krw||0).toLocaleString('ko-KR')}
+                  </Text>
+                </View>
+                <Text style={styles.itemAmt}>+₩{(r.krw||0).toLocaleString('ko-KR')}</Text>
+              </View>
+            ))}
+          </>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+
+function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate }) {
   const [krw, setKrw] = useState('');
   const [local, setLocal] = useState('');
   const [rate, setRate] = useState('');
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
 
-  const sym = trip.country.sym;
-  const r100 = trip.country.r100;
-
-  const calcRate = (k, l) => {
-    if (!k || !l) return;
-    const r = r100 ? parseInt(k) / parseInt(l) * 100 : parseInt(k) / parseInt(l);
-    setRate(r.toFixed(2));
-  };
-
-  const handleKrw = (v) => { setKrw(v); calcRate(v, local); };
-  const handleLocal = (v) => { setLocal(v); calcRate(krw, v); };
-  const handleRate = (v) => {
-    setRate(v);
-    if (local && v) {
-      const k = r100 ? parseInt(local) * parseFloat(v) / 100 : parseInt(local) * parseFloat(v);
-      setKrw(Math.round(k).toString());
-    }
-  };
+  const handleKrw = (v) => { setKrw(v); const r = calcRate(v, local); if (r) setRate(r); };
+  const handleLocal = (v) => { setLocal(v); const r = calcRate(krw, v); if (r) setRate(r); };
 
   const handleAdd = () => {
     if (!krw || !local) return;
-    const item = {
+    setCharges([...charges, {
       id: Date.now(),
       krw: parseInt(krw.replace(/,/g, '')),
       local: parseInt(local.replace(/,/g, '')),
       rate: parseFloat(rate) || 0,
-      date: date || '',
-      note,
-    };
-    if (mode === 'charge') setCharges([...charges, item]);
-    else setExchanges([...exchanges, item]);
-    setKrw(''); setLocal(''); setRate(''); setDate(''); setNote('');
-    setShowForm(false);
+      date, note,
+    }]);
+    setKrw(''); setLocal(''); setRate(''); setNote('');
   };
 
-  const allItems = [
-    ...charges.map(c => ({ ...c, type: 'charge' })),
-    ...exchanges.map(e => ({ ...e, type: 'exchange' })),
-  ].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>카드 충전 (계좌→카드)</Text>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>원화(계좌차감)</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>현지화</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
+        </View>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>환율</Text>
+          <TextInput style={styles.input} placeholder="930.00" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>날짜</Text>
+          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+        </View>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>메모</Text>
+          <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+        </View>
+      </View>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+        <Text style={styles.addBtnText}>+ 충전</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
-  const totalKrw = allItems.reduce((s, i) => s + i.krw, 0);
-  const totalLocal = allItems.reduce((s, i) => s + i.local, 0);
+function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate }) {
+  const [krw, setKrw] = useState('');
+  const [local, setLocal] = useState('');
+  const [rate, setRate] = useState('');
+  const [date, setDate] = useState('');
+  const [note, setNote] = useState('');
+
+  const handleKrw = (v) => { setKrw(v); const r = calcRate(v, local); if (r) setRate(r); };
+  const handleLocal = (v) => { setLocal(v); const r = calcRate(krw, v); if (r) setRate(r); };
+
+  const handleAdd = () => {
+    if (!krw || !local) return;
+    setExchanges([...exchanges, {
+      id: Date.now(),
+      krw: parseInt(krw.replace(/,/g, '')),
+      local: parseInt(local.replace(/,/g, '')),
+      rate: parseFloat(rate) || 0,
+      date, note,
+    }]);
+    setKrw(''); setLocal(''); setRate(''); setNote('');
+  };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <View style={styles.summaryCard}>
-          <Text style={styles.summaryLabel}>총 충전/환전</Text>
-          <Text style={styles.summaryValue}>{sym}{totalLocal.toLocaleString('ko-KR')}</Text>
-          <Text style={styles.summaryDetail}>{totalKrw.toLocaleString('ko-KR')}원 투입</Text>
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>현금 환전 (계좌→현금)</Text>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>원화(계좌차감)</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
         </View>
-
-        {allItems.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyText}>충전/환전 내역이 없어요</Text>
-          </View>
-        ) : (
-          allItems.map(item => (
-            <View key={item.id} style={styles.row}>
-              <Text style={styles.rowIcon}>{item.type === 'charge' ? '💳' : '💵'}</Text>
-              <View style={styles.rowInfo}>
-                <Text style={styles.rowName}>{item.type === 'charge' ? '카드 충전' : '현금 환전'}</Text>
-                <Text style={styles.rowSub}>{item.date}{item.note ? ' · ' + item.note : ''} · 환율 {item.rate}</Text>
-              </View>
-              <View style={styles.rowAmts}>
-                <Text style={styles.rowAmt}>{sym}{item.local.toLocaleString('ko-KR')}</Text>
-                <Text style={styles.rowAmtSub}>{item.krw.toLocaleString('ko-KR')}원</Text>
-              </View>
-            </View>
-          ))
-        )}
-      </ScrollView>
-
-      <TouchableOpacity style={styles.fab} onPress={() => setShowForm(true)}>
-        <Text style={styles.fabText}>+ 충전/환전 등록</Text>
-      </TouchableOpacity>
-
-      <Modal visible={showForm} animationType="slide" presentationStyle="pageSheet">
-        <View style={styles.modal}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>충전/환전 등록</Text>
-            <TouchableOpacity onPress={() => setShowForm(false)}>
-              <Text style={styles.modalClose}>닫기</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* 모드 선택 */}
-          <View style={styles.modeRow}>
-            {MODE.map(m => (
-              <TouchableOpacity
-                key={m.id}
-                style={[styles.modeBtn, mode === m.id && styles.modeBtnActive]}
-                onPress={() => setMode(m.id)}
-              >
-                <Text style={styles.modeIcon}>{m.icon}</Text>
-                <Text style={[styles.modeLabel, mode === m.id && styles.modeLabelActive]}>{m.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>원화 (원)</Text>
-          <TextInput style={styles.input} placeholder="710,920" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
-
-          <Text style={styles.label}>{trip.country.name}화 ({sym})</Text>
-          <TextInput style={styles.input} placeholder="76,000" keyboardType="numeric" value={local} onChangeText={handleLocal} />
-
-          <Text style={styles.label}>환율 (자동계산)</Text>
-          <TextInput style={styles.input} placeholder="935.42" keyboardType="decimal-pad" value={rate} onChangeText={handleRate} />
-
+        <View style={styles.col}>
+          <Text style={styles.label}>현지화</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
+        </View>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>환율</Text>
+          <TextInput style={styles.input} placeholder="930.00" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+        </View>
+        <View style={styles.col}>
           <Text style={styles.label}>날짜</Text>
-          <TextInput style={styles.input} placeholder="09-20" value={date} onChangeText={setDate} />
-
-          <Text style={styles.label}>메모 (선택)</Text>
-          <TextInput style={styles.input} placeholder="" value={note} onChangeText={setNote} />
-
-          <TouchableOpacity style={styles.btnSave} onPress={handleAdd}>
-            <Text style={styles.btnSaveText}>저장</Text>
-          </TouchableOpacity>
+          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
         </View>
-      </Modal>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>메모</Text>
+          <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+        </View>
+      </View>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+        <Text style={styles.addBtnText}>+ 환전</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function AtmForm({ trip, atms, setAtms, sym }) {
+  const [local, setLocal] = useState('');
+  const [date, setDate] = useState('');
+  const [note, setNote] = useState('');
+
+  const handleAdd = () => {
+    if (!local) return;
+    setAtms([...atms, {
+      id: Date.now(),
+      local: parseInt(local.replace(/,/g, '')),
+      date, note,
+    }]);
+    setLocal(''); setNote('');
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>🏧 ATM 인출 (카드→현금)</Text>
+      <Text style={styles.helpText}>
+        트레블월렛 카드로 현지 ATM에서 현금 인출 시 사용합니다.{'\n'}
+        카드 잔액이 줄고 현금 잔액이 늘어납니다 (환율 변환 없음).
+      </Text>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>인출 현지화 금액</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={setLocal} />
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>날짜</Text>
+          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+        </View>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>메모</Text>
+          <TextInput style={styles.input} placeholder="ATM 수수료는 별도 지출로 입력" value={note} onChangeText={setNote} />
+        </View>
+      </View>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+        <Text style={styles.addBtnText}>+ ATM인출</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+function RefundForm({ trip, refunds, setRefunds, sym, r100 }) {
+  const [local, setLocal] = useState('');
+  const [krw, setKrw] = useState('');
+  const [rate, setRate] = useState('');
+  const [date, setDate] = useState('');
+  const [note, setNote] = useState('');
+
+  const handleLocal = (v) => {
+    setLocal(v);
+    const l = parseInt(v.replace(/,/g, '')) || 0;
+    const k = parseInt(krw.replace(/,/g, '')) || 0;
+    if (l && k) setRate((r100 ? k/l*100 : k/l).toFixed(2));
+  };
+  const handleKrw = (v) => {
+    setKrw(v);
+    const l = parseInt(local.replace(/,/g, '')) || 0;
+    const k = parseInt(v.replace(/,/g, '')) || 0;
+    if (l && k) setRate((r100 ? k/l*100 : k/l).toFixed(2));
+  };
+  const handleRate = (v) => {
+    setRate(v);
+    const l = parseInt(local.replace(/,/g, '')) || 0;
+    const r = parseFloat(v) || 0;
+    if (l && r) setKrw(Math.round(r100 ? l*r/100 : l*r).toLocaleString('ko-KR'));
+  };
+
+  const handleAdd = () => {
+    if (!local || !krw) return;
+    setRefunds([...refunds, {
+      id: Date.now(),
+      local: parseInt(local.replace(/,/g, '')),
+      krw: parseInt(krw.replace(/,/g, '')),
+      rate: parseFloat(rate) || 0,
+      date, note,
+    }]);
+    setLocal(''); setKrw(''); setRate(''); setNote('');
+  };
+
+  return (
+    <View style={styles.card}>
+      <Text style={styles.cardTitle}>↩ 카드→계좌 이전 (잔액 환전)</Text>
+      <Text style={styles.helpText}>
+        트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.{'\n'}
+        카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
+      </Text>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>이전 현지화 금액</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>반환 원화(직접입력)</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
+        </View>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>환율(자동계산)</Text>
+          <TextInput style={styles.input} placeholder="자동" keyboardType="decimal-pad" value={rate} onChangeText={handleRate} />
+        </View>
+        <View style={styles.col}>
+          <Text style={styles.label}>날짜</Text>
+          <TextInput style={styles.input} placeholder="" value={date} onChangeText={setDate} />
+        </View>
+      </View>
+      <View style={styles.formRow}>
+        <View style={styles.col}>
+          <Text style={styles.label}>메모</Text>
+          <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+        </View>
+      </View>
+      <TouchableOpacity style={styles.addBtn} onPress={handleAdd}>
+        <Text style={styles.addBtnText}>+ 카드 잔액 이전</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  scroll: { flex: 1 },
-  scrollContent: { padding: 16, paddingBottom: 80 },
-  summaryCard: { backgroundColor: '#1a3a5c', borderRadius: 12, padding: 16, marginBottom: 16 },
-  summaryLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
-  summaryValue: { color: '#fff', fontSize: 28, fontWeight: '800', marginTop: 4 },
-  summaryDetail: { color: 'rgba(255,255,255,0.5)', fontSize: 12, marginTop: 4 },
-  empty: { alignItems: 'center', padding: 40 },
-  emptyText: { color: '#9b9b9b', fontSize: 14 },
-  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8 },
-  rowIcon: { fontSize: 24, marginRight: 10 },
-  rowInfo: { flex: 1 },
-  rowName: { fontSize: 14, fontWeight: '600', color: '#1a1a1a' },
-  rowSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
-  rowAmts: { alignItems: 'flex-end' },
-  rowAmt: { fontSize: 14, fontWeight: '700', color: '#1a3a5c' },
-  rowAmtSub: { fontSize: 11, color: '#9b9b9b' },
-  fab: { position: 'absolute', bottom: 16, left: 16, right: 16, backgroundColor: '#1a3a5c', borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  fabText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  modal: { flex: 1, padding: 20, backgroundColor: '#f5f5f0' },
-  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  modalTitle: { fontSize: 20, fontWeight: '800', color: '#1a3a5c' },
-  modalClose: { fontSize: 15, color: '#2563a8' },
-  modeRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
-  modeBtn: { flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-  modeBtnActive: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
-  modeIcon: { fontSize: 24, marginBottom: 4 },
-  modeLabel: { fontSize: 13, color: '#1a1a1a' },
-  modeLabelActive: { color: '#fff', fontWeight: '700' },
-  label: { fontSize: 13, fontWeight: '600', color: '#6b6b6b', marginBottom: 6, marginTop: 12 },
-  input: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', padding: 12, fontSize: 15 },
-  btnSave: { backgroundColor: '#1a3a5c', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 24 },
-  btnSaveText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  container: { flex: 1, backgroundColor: '#f0eee8' },
+  content: { padding: 12, paddingBottom: 32 },
+
+  subTabScroll: { marginBottom: 12, maxHeight: 50, flexGrow: 0 },
+  subTab: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    marginRight: 6,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  subTabActive: { backgroundColor: '#1a3a5c', borderColor: '#1a3a5c' },
+  subTabIcon: { fontSize: 14 },
+  subTabText: { fontSize: 12, color: '#6b6b6b' },
+  subTabTextActive: { color: '#fff', fontWeight: '600' },
+
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.08)',
+  },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 12 },
+  helpText: { fontSize: 11, color: '#9b9b9b', marginBottom: 12, lineHeight: 16 },
+
+  formRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  col: { flex: 1 },
+  label: { fontSize: 11, fontWeight: '600', color: '#6b6b6b', marginBottom: 4 },
+  input: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+  addBtn: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  addBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
+
+  empty: { color: '#9b9b9b', fontSize: 13, textAlign: 'center', padding: 20 },
+
+  itemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  itemIcon: { fontSize: 18, marginRight: 10 },
+  itemInfo: { flex: 1 },
+  itemName: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
+  itemSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
+  itemAmt: { fontSize: 13, fontWeight: '700', color: '#1a1a1a' },
 });

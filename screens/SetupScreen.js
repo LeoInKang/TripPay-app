@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, SafeAreaView
 } from 'react-native';
+import FullDateField from '../components/FullDateField';
 
 const COUNTRIES = [
   { flag:'🇯🇵', name:'일본', code:'JPY', sym:'¥', r100:true },
@@ -61,22 +62,10 @@ export default function SetupScreen({ navigation }) {
         {/* 날짜 */}
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-            <Text style={styles.label}>시작일</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="2024-09-22"
-              value={startDate}
-              onChangeText={setStartDate}
-            />
+            <FullDateField label="시작일" value={startDate} onChange={setStartDate} />
           </View>
           <View style={[styles.field, { flex: 1 }]}>
-            <Text style={styles.label}>종료일</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="2024-09-28"
-              value={endDate}
-              onChangeText={setEndDate}
-            />
+            <FullDateField label="종료일" value={endDate} onChange={setEndDate} />
           </View>
         </View>
 

@@ -3,7 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, SafeAreaView, Platform, Alert
 } from 'react-native';
-import DateField from '../components/DateField';
+import DateField from '../components/FullDateField';
 
 function notify(msg) {
   if (Platform.OS === 'web') {

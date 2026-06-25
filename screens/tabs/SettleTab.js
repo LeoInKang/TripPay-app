@@ -50,6 +50,8 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
   const refundKrw     = (refunds||[]).reduce((s,r) => s+(r.krw||0), 0);
   const acctBal       = totalKrwDep - totalChargedKrw - totalExchangedKrw - totalKrwExp + refundKrw;
 
+  const hasNegative = acctBal < 0 || cardBal < 0 || cashBal < 0;
+
   // --- 인당 환급 (전체 잔액의 원화환산을 인원수로 분배) ---
   const cardBalKrw = toKrw(cardBal);
   const cashBalKrw = toKrw(cashBal);
@@ -88,6 +90,14 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
         <Text style={styles.shareBtnText}>{sharing ? '공유 링크 만드는 중…' : '🔗 참석자에게 공유하기'}</Text>
       </TouchableOpacity>
 
+      {hasNegative && (
+        <View style={styles.warnBanner}>
+          <Text style={styles.warnText}>
+            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요. 입력 내역을 확인하세요.
+          </Text>
+        </View>
+      )}
+
       {/* 여행 경비 요약 */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>여행 경비 요약</Text>
@@ -110,14 +120,14 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>계좌 잔액</Text>
-            <Text style={[styles.subValue, { color: '#1D9E75' }]}>
+            <Text style={[styles.subValue, { color: acctBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
               ₩{acctBal.toLocaleString('ko-KR')}
             </Text>
             <Text style={styles.subPer}>인당 ₩{perAcct.toLocaleString('ko-KR')}</Text>
           </View>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>트레블월렛 잔액</Text>
-            <Text style={[styles.subValue, { color: '#1D9E75' }]}>
+            <Text style={[styles.subValue, { color: cardBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
               {sym}{cardBal.toLocaleString('ko-KR')}
             </Text>
             <Text style={styles.subPer}>인당 {sym}{perCard.toLocaleString('ko-KR')}</Text>
@@ -188,6 +198,9 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0eee8' },
   content: { padding: 12, paddingBottom: 32 },
+
+  warnBanner: { backgroundColor: '#fce4e4', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 0.5, borderColor: '#f0b8b8' },
+  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600', lineHeight: 16 },
 
   // 공유 버튼 (그라데이션 효과를 위해 배경색 적용)
   shareBtn: {

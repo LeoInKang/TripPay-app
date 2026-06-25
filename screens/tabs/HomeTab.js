@@ -36,6 +36,9 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   const totalFxAmt = expenses.reduce((s,e) => s+e.amt, 0);
   const totalFxKrw = toKrw(totalFxAmt);
 
+  // 잔액 음수 경고
+  const hasNegative = acctBal < 0 || cardBal < 0 || cashBal < 0;
+
   // 전체 내역 타임라인
   const allItems = [
     ...deposits.map(d  => ({ ...d,  type:'deposit'  })),
@@ -54,16 +57,24 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {hasNegative && (
+        <View style={styles.warnBanner}>
+          <Text style={styles.warnText}>
+            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요. 입력 내역을 확인하세요.
+          </Text>
+        </View>
+      )}
+
       {/* 잔액 카드 3개 */}
       <View style={styles.balRow}>
         <View style={styles.balCard}>
           <Text style={styles.balLabel}>계좌 잔액</Text>
-          <Text style={styles.balValue}>{acctBal.toLocaleString('ko-KR')}원</Text>
+          <Text style={[styles.balValue, acctBal < 0 && { color: '#E24B4A' }]}>{acctBal.toLocaleString('ko-KR')}원</Text>
           <Text style={styles.balSub}>충전가능</Text>
         </View>
         <View style={styles.balCard}>
           <Text style={styles.balLabel}>카드 잔액</Text>
-          <Text style={styles.balValue}>{sym}{cardBal.toLocaleString('ko-KR')}</Text>
+          <Text style={[styles.balValue, cardBal < 0 && { color: '#E24B4A' }]}>{sym}{cardBal.toLocaleString('ko-KR')}</Text>
           <Text style={styles.balSub}>충전{charges.length}회</Text>
         </View>
         <View style={styles.balCard}>
@@ -173,6 +184,8 @@ function _amtColor(type) {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 12, paddingBottom: 32 },
+  warnBanner: { backgroundColor: '#fce4e4', borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 0.5, borderColor: '#f0b8b8' },
+  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600', lineHeight: 16 },
   balRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   balCard: { flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' },
   balLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },

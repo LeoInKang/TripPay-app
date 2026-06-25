@@ -1,5 +1,14 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
+import { shareTrip } from '../../share';
+
+function notify(msg) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(msg);
+  } else {
+    Alert.alert('알림', msg);
+  }
+}
 
 export default function SettleTab({ trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
   const sym  = trip.country.sym;
@@ -54,11 +63,29 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
   const perCardKrw = Math.round(cardBalKrw / N);
   const perCashKrw = Math.round(cashBalKrw / N);
 
+  const [sharing, setSharing] = useState(false);
+  const handleShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const { url, method } = await shareTrip({
+        trip, deposits, expenses, krwExps,
+        balance: { avgRate, acctBal, cardBal, cashBal },
+      });
+      if (method === 'copy') notify('공유 링크를 복사했어요.\n' + url);
+      else if (method === 'none') notify('공유 링크:\n' + url);
+    } catch (e) {
+      notify('공유에 실패했어요. 네트워크 연결을 확인해 주세요.');
+    } finally {
+      setSharing(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* 공유 버튼 - 그라데이션 */}
-      <TouchableOpacity style={styles.shareBtn} activeOpacity={0.85}>
-        <Text style={styles.shareBtnText}>🔗 참석자에게 공유하기</Text>
+      <TouchableOpacity style={styles.shareBtn} activeOpacity={0.85} onPress={handleShare} disabled={sharing}>
+        <Text style={styles.shareBtnText}>{sharing ? '공유 링크 만드는 중…' : '🔗 참석자에게 공유하기'}</Text>
       </TouchableOpacity>
 
       {/* 여행 경비 요약 */}

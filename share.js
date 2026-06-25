@@ -53,12 +53,11 @@ export async function createShareLink(payload) {
 export async function shareTrip(data) {
   const payload = buildSharePayload(data);
   const url = await createShareLink(payload);
-  const title = `${data?.trip?.name || 'TripPay'} 여행 경비`;
 
   if (Platform.OS === 'web') {
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
-        await navigator.share({ title: 'TripPay', text: title, url });
+        await navigator.share({ title: 'TripPay', url });
         return { url, method: 'share' };
       } catch (e) {
         // 취소/미지원 -> 복사로 폴백
@@ -71,6 +70,6 @@ export async function shareTrip(data) {
     return { url, method: 'none' };
   }
 
-  await Share.share({ message: `${title}\n${url}`, url });
+  await Share.share({ message: url });
   return { url, method: 'share' };
 }

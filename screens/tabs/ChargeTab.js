@@ -27,6 +27,24 @@ export default function ChargeTab({
     return (r100 ? (k / l * 100) : (k / l)).toFixed(2);
   };
 
+  const [confirmKey, setConfirmKey] = useState(null);
+  const renderDel = (rowKey, onDelete) => (
+    confirmKey === rowKey ? (
+      <View style={styles.delWrap}>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmYes]} onPress={() => { onDelete(); setConfirmKey(null); }}>
+          <Text style={styles.confirmYesText}>삭제</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmNo]} onPress={() => setConfirmKey(null)}>
+          <Text style={styles.confirmNoText}>취소</Text>
+        </TouchableOpacity>
+      </View>
+    ) : (
+      <TouchableOpacity style={styles.delBtn} onPress={() => setConfirmKey(rowKey)} hitSlop={8}>
+        <Text style={styles.delText}>✕</Text>
+      </TouchableOpacity>
+    )
+  );
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* 서브 탭 */}
@@ -68,6 +86,7 @@ export default function ChargeTab({
                   </Text>
                 </View>
                 <Text style={styles.itemAmt}>{sym}{c.local.toLocaleString('ko-KR')}</Text>
+                {renderDel('c-' + c.id, () => setCharges(charges.filter(x => x.id !== c.id)))}
               </View>
             ))}
             {exchanges.map(e => (
@@ -80,6 +99,7 @@ export default function ChargeTab({
                   </Text>
                 </View>
                 <Text style={styles.itemAmt}>{sym}{e.local.toLocaleString('ko-KR')}</Text>
+                {renderDel('e-' + e.id, () => setExchanges(exchanges.filter(x => x.id !== e.id)))}
               </View>
             ))}
             {atms.map(a => (
@@ -90,6 +110,7 @@ export default function ChargeTab({
                   <Text style={styles.itemSub}>{a.date}{a.note ? ' · ' + a.note : ''}</Text>
                 </View>
                 <Text style={styles.itemAmt}>{sym}{a.local.toLocaleString('ko-KR')}</Text>
+                {renderDel('a-' + a.id, () => setAtms(atms.filter(x => x.id !== a.id)))}
               </View>
             ))}
             {refunds.map(r => (
@@ -102,6 +123,7 @@ export default function ChargeTab({
                   </Text>
                 </View>
                 <Text style={styles.itemAmt}>+₩{(r.krw||0).toLocaleString('ko-KR')}</Text>
+                {renderDel('r-' + r.id, () => setRefunds(refunds.filter(x => x.id !== r.id)))}
               </View>
             ))}
           </>
@@ -411,4 +433,12 @@ const styles = StyleSheet.create({
   itemName: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
   itemSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
   itemAmt: { fontSize: 13, fontWeight: '700', color: '#1a1a1a' },
+  delBtn: { paddingHorizontal: 8, paddingVertical: 4, marginLeft: 8 },
+  delText: { fontSize: 14, color: '#c0413f', fontWeight: '700' },
+  delWrap: { flexDirection: 'row', gap: 6, marginLeft: 8 },
+  confirmBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  confirmYes: { backgroundColor: '#E24B4A' },
+  confirmYesText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  confirmNo: { backgroundColor: '#f0f0f0' },
+  confirmNoText: { color: '#6b6b6b', fontSize: 12, fontWeight: '600' },
 });

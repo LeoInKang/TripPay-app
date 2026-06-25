@@ -45,6 +45,24 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
     }
   };
 
+  const [confirmKey, setConfirmKey] = useState(null);
+  const renderDel = (rowKey, onDelete) => (
+    confirmKey === rowKey ? (
+      <View style={styles.delWrap}>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmYes]} onPress={() => { onDelete(); setConfirmKey(null); }}>
+          <Text style={styles.confirmYesText}>삭제</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmNo]} onPress={() => setConfirmKey(null)}>
+          <Text style={styles.confirmNoText}>취소</Text>
+        </TouchableOpacity>
+      </View>
+    ) : (
+      <TouchableOpacity style={styles.delBtn} onPress={() => setConfirmKey(rowKey)} hitSlop={8}>
+        <Text style={styles.delText}>✕</Text>
+      </TouchableOpacity>
+    )
+  );
+
   return (
     <View style={styles.container}>
       {/* 필터 바 */}
@@ -101,9 +119,7 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
                   ? `${sym}${item.amt.toLocaleString('ko-KR')}`
                   : `₩${item.amt.toLocaleString('ko-KR')}`}
               </Text>
-              <TouchableOpacity onPress={() => handleDelete(item)} style={styles.delBtn}>
-                <Text style={styles.delBtnText}>✕</Text>
-              </TouchableOpacity>
+              {renderDel('i-' + item.type + '-' + item.id, () => handleDelete(item))}
             </View>
           ))
         )}
@@ -164,5 +180,11 @@ const styles = StyleSheet.create({
 
   amt: { fontSize: 13, fontWeight: '700', color: '#1a1a1a' },
   delBtn: { marginLeft: 8, padding: 4 },
-  delBtnText: { fontSize: 13, color: '#c0c0c0' },
+  delText: { fontSize: 13, color: '#c0413f', fontWeight: '700' },
+  delWrap: { flexDirection: 'row', gap: 6, marginLeft: 8 },
+  confirmBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  confirmYes: { backgroundColor: '#E24B4A' },
+  confirmYesText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  confirmNo: { backgroundColor: '#f0f0f0' },
+  confirmNoText: { color: '#6b6b6b', fontSize: 12, fontWeight: '600' },
 });

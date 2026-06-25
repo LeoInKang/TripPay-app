@@ -63,6 +63,24 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
     setDeposits(deposits.filter(d => d.id !== id));
   };
 
+  const [confirmKey, setConfirmKey] = useState(null);
+  const renderDel = (rowKey, onDelete) => (
+    confirmKey === rowKey ? (
+      <View style={styles.delWrap}>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmYes]} onPress={() => { onDelete(); setConfirmKey(null); }}>
+          <Text style={styles.confirmYesText}>삭제</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmNo]} onPress={() => setConfirmKey(null)}>
+          <Text style={styles.confirmNoText}>취소</Text>
+        </TouchableOpacity>
+      </View>
+    ) : (
+      <TouchableOpacity style={styles.delBtn} onPress={() => setConfirmKey(rowKey)} hitSlop={8}>
+        <Text style={styles.delText}>✕</Text>
+      </TouchableOpacity>
+    )
+  );
+
   const krwDeps   = deposits.filter(d => d.cur === 'KRW');
   const localDeps = deposits.filter(d => d.cur === 'LOCAL');
 
@@ -179,9 +197,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
                     <Text style={styles.depAmt}>
                       ₩{(d.krwEquiv || d.amt || 0).toLocaleString('ko-KR')}
                     </Text>
-                    <TouchableOpacity onPress={() => handleDelete(d.id)} style={styles.delBtn}>
-                      <Text style={styles.delBtnText}>✕</Text>
-                    </TouchableOpacity>
+                    {renderDel('d-' + d.id, () => handleDelete(d.id))}
                   </View>
                 ))}
               </View>
@@ -212,9 +228,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
                       <Text style={styles.depAmt}>{sym}{d.amt.toLocaleString('ko-KR')}</Text>
                       <Text style={styles.depAmtKrw}>≈₩{(d.krwEquiv || 0).toLocaleString('ko-KR')}</Text>
                     </View>
-                    <TouchableOpacity onPress={() => handleDelete(d.id)} style={styles.delBtn}>
-                      <Text style={styles.delBtnText}>✕</Text>
-                    </TouchableOpacity>
+                    {renderDel('d-' + d.id, () => handleDelete(d.id))}
                   </View>
                 ))}
               </View>
@@ -286,5 +300,11 @@ const styles = StyleSheet.create({
   depAmt: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   depAmtKrw: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
   delBtn: { marginLeft: 8, padding: 4 },
-  delBtnText: { fontSize: 14, color: '#c0c0c0' },
+  delText: { fontSize: 14, color: '#c0413f', fontWeight: '700' },
+  delWrap: { flexDirection: 'row', gap: 6, marginLeft: 8 },
+  confirmBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  confirmYes: { backgroundColor: '#E24B4A' },
+  confirmYesText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  confirmNo: { backgroundColor: '#f0f0f0' },
+  confirmNoText: { color: '#6b6b6b', fontSize: 12, fontWeight: '600' },
 });

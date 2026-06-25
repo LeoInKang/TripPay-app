@@ -1,7 +1,7 @@
 import { Platform, Share } from 'react-native';
 
 // index.html과 동일한 쓰기 전용 Access 키 (Create+Update만, Delete 없음 / 이미 공개된 값)
-const JBIN_ACCESS = '$2a$10$ES//HU7gK4ldgY3IJYzCFOO2xvwqabZtK5.RvVX5YP4VOfOwr199y';
+const JBIN_ACCESS = '$2a$10$xvOaqF.H5hKFjNwfi.ZvJ.vosXlodN0WHvCVbqAeHWc5yzp/VrGBi';
 const VIEW_BASE   = 'https://leoinkang.github.io/travel-expense-app/view.html';
 
 // view.html이 기대하는 형태로 페이로드 구성

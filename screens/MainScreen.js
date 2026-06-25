@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView
@@ -9,6 +9,7 @@ import ChargeTab  from './tabs/ChargeTab';
 import AddTab     from './tabs/AddTab';
 import ListTab    from './tabs/ListTab';
 import SettleTab  from './tabs/SettleTab';
+import { saveTripData, setCurrentTripId, clearCurrentTripId } from '../storage';
 
 const TABS = [
   { id: 'home',    icon: '🏠', label: '현황' },
@@ -20,16 +21,38 @@ const TABS = [
 ];
 
 export default function MainScreen({ route, navigation }) {
-  const { trip, initialDeposits=[], initialCharges=[], initialExchanges=[], initialExpenses=[] } = route.params;
+  const {
+    trip,
+    initialDeposits=[], initialCharges=[], initialExchanges=[],
+    initialAtms=[], initialRefunds=[], initialExpenses=[], initialKrwExps=[],
+  } = route.params;
   const [activeTab, setActiveTab] = useState('home');
 
   const [deposits,  setDeposits]  = useState(initialDeposits);
   const [charges,   setCharges]   = useState(initialCharges);
   const [exchanges, setExchanges] = useState(initialExchanges);
-  const [atms,      setAtms]      = useState([]);
-  const [refunds,   setRefunds]   = useState([]);
+  const [atms,      setAtms]      = useState(initialAtms);
+  const [refunds,   setRefunds]   = useState(initialRefunds);
   const [expenses,  setExpenses]  = useState(initialExpenses);
-  const [krwExps,   setKrwExps]   = useState([]);
+  const [krwExps,   setKrwExps]   = useState(initialKrwExps);
+
+  // 이 여행을 현재(활성) 여행으로 표시 -> 앱 재시작 시 자동 복원 대상
+  useEffect(() => {
+    if (trip?.id) setCurrentTripId(trip.id);
+  }, [trip?.id]);
+
+  // 데이터 변경 시 자동 저장
+  useEffect(() => {
+    if (!trip?.id) return;
+    saveTripData(trip.id, {
+      trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps,
+    });
+  }, [trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps]);
+
+  const goHome = () => {
+    clearCurrentTripId();
+    navigation.navigate('Landing');
+  };
 
   const sharedProps = {
     trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps,
@@ -81,7 +104,7 @@ export default function MainScreen({ route, navigation }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconBtn}
-            onPress={() => navigation.navigate('Landing')}
+            onPress={goHome}
           >
             <Text style={styles.iconBtnText}>🏠 홈</Text>
           </TouchableOpacity>

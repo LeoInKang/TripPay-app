@@ -1,5 +1,6 @@
 // 실제 여행 데이터 (2026-05-05 일본 골프 투어)
 export const SAMPLE_TRIP = {
+  id: 'trip_sample',
   name: '일본 골프 투어',
   startDate: '2026-05-05',
   endDate: '2026-05-08',

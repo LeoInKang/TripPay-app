@@ -1,9 +1,11 @@
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
 import SetupScreen from './screens/SetupScreen';
 import MainScreen  from './screens/MainScreen';
+import { getCurrentTripId, loadTripData } from './storage';
 import {
   SAMPLE_TRIP, SAMPLE_DEPOSITS, SAMPLE_CHARGES,
   SAMPLE_EXCHANGES, SAMPLE_EXPENSES
@@ -57,12 +59,48 @@ function LandingScreen({ navigation }) {
 }
 
 export default function App() {
+  const [booting, setBooting] = useState(true);
+  const [resume,  setResume]  = useState(null);
+
+  // 앱 시작 시 마지막 여행 자동 복원
+  useEffect(() => {
+    (async () => {
+      try {
+        const id = await getCurrentTripId();
+        if (id) {
+          const data = await loadTripData(id);
+          if (data && data.trip) setResume(data);
+        }
+      } catch (e) {}
+      setBooting(false);
+    })();
+  }, []);
+
+  if (booting) {
+    return (
+      <View style={styles.boot}>
+        <ActivityIndicator color="#64b4ff" />
+      </View>
+    );
+  }
+
+  const resumeParams = resume ? {
+    trip: resume.trip,
+    initialDeposits:  resume.deposits  || [],
+    initialCharges:   resume.charges   || [],
+    initialExchanges: resume.exchanges || [],
+    initialAtms:      resume.atms      || [],
+    initialRefunds:   resume.refunds   || [],
+    initialExpenses:  resume.expenses  || [],
+    initialKrwExps:   resume.krwExps   || [],
+  } : undefined;
+
   return (
     <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={resume ? 'Main' : 'Landing'}>
         <Stack.Screen name="Landing" component={LandingScreen} />
         <Stack.Screen name="Setup"   component={SetupScreen} />
-        <Stack.Screen name="Main"    component={MainScreen} />
+        <Stack.Screen name="Main"    component={MainScreen} initialParams={resumeParams} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -70,6 +108,7 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a3a5c' },
+  boot: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' },
   background: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 60, paddingHorizontal: 24 },
   heroSection: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   planeEmoji: { fontSize: 80, marginBottom: 16 },

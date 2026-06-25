@@ -10,10 +10,12 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   const avgRate = allFx.length > 0 ? allFx.reduce((s,i) => s+i.rate, 0) / allFx.length : 0;
   const toKrw = v => avgRate > 0 ? Math.round(v * avgRate / (r100 ? 100 : 1)) : 0;
 
-  // 카드 잔액 = 충전합계 - 카드결제합계
+  // 카드 잔액 = 충전 - 카드결제 - ATM인출 - 카드잔액이전 (SettleTab과 동일)
   const cardCharged = charges.reduce((s,c) => s+c.local, 0);
   const cardSpent   = expenses.filter(e => e.pay !== '현금').reduce((s,e) => s+e.amt, 0);
-  const cardBal     = cardCharged - cardSpent;
+  const cardRefund  = (refunds||[]).reduce((s,r) => s+(r.local||0), 0);
+  const cardAtm     = (atms||[]).reduce((s,a) => s+(a.local||0), 0);
+  const cardBal     = cardCharged - cardSpent - cardRefund - cardAtm;
 
   // 현금 잔액 = 환전합계 + ATM합계 + LOCAL 회비납부 - 현금결제합계
   const localDeposits = deposits.filter(d => d.cur === 'LOCAL').reduce((s,d) => s+(d.amt||0), 0);

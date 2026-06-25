@@ -3,8 +3,9 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
-import SetupScreen from './screens/SetupScreen';
-import MainScreen  from './screens/MainScreen';
+import SetupScreen   from './screens/SetupScreen';
+import MainScreen    from './screens/MainScreen';
+import HistoryScreen from './screens/HistoryScreen';
 import { getCurrentTripId, loadTripData } from './storage';
 import {
   SAMPLE_TRIP, SAMPLE_DEPOSITS, SAMPLE_CHARGES,
@@ -44,7 +45,7 @@ function LandingScreen({ navigation }) {
           <TouchableOpacity style={styles.btnSecondary}>
             <Text style={styles.btnSecondaryText}>📂 여행 데이터 가져오기</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.btnSecondary}>
+          <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('History')}>
             <Text style={styles.btnSecondaryText}>📋 히스토리</Text>
           </TouchableOpacity>
           {/* 개발용 */}
@@ -101,6 +102,7 @@ export default function App() {
         <Stack.Screen name="Landing" component={LandingScreen} />
         <Stack.Screen name="Setup"   component={SetupScreen} />
         <Stack.Screen name="Main"    component={MainScreen} initialParams={resumeParams} />
+        <Stack.Screen name="History" component={HistoryScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

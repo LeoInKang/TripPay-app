@@ -99,7 +99,7 @@ export default function MainScreen({ route, navigation }) {
           <TouchableOpacity style={styles.iconBtn}>
             <Text style={styles.iconBtnText}>⚙ 설정</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('History')}>
             <Text style={styles.iconBtnText}>📋 히스토리</Text>
           </TouchableOpacity>
           <TouchableOpacity

@@ -16,6 +16,7 @@ const COUNTRIES = [
   { flag:'🇨🇳', name:'중국', code:'CNY', sym:'¥', r100:false },
   { flag:'🇵🇭', name:'필리핀', code:'PHP', sym:'₱', r100:false },
   { flag:'🇸🇬', name:'싱가포르', code:'SGD', sym:'S$', r100:false },
+  { flag:'🇨🇦', name:'캐나다', code:'CAD', sym:'C$', r100:false },
 ];
 
 export default function SetupScreen({ navigation }) {
@@ -46,6 +47,9 @@ export default function SetupScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+          <Text style={styles.backText}>‹ 뒤로</Text>
+        </TouchableOpacity>
         <Text style={styles.title}>새 여행 시작</Text>
 
         {/* 여행명 */}
@@ -126,6 +130,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f5f0' },
   scroll: { padding: 20, paddingBottom: 40 },
   title: { fontSize: 24, fontWeight: '800', color: '#1a3a5c', marginBottom: 24 },
+  backBtn: { marginBottom: 12 },
+  backText: { fontSize: 15, color: '#1a3a5c', fontWeight: '600' },
   field: { marginBottom: 16 },
   row: { flexDirection: 'row', marginBottom: 0 },
   label: { fontSize: 13, fontWeight: '600', color: '#6b6b6b', marginBottom: 6 },

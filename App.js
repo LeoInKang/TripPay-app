@@ -2,17 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator, Platform, Alert } from 'react-native';
 import SetupScreen   from './screens/SetupScreen';
 import MainScreen    from './screens/MainScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import { getCurrentTripId, loadTripData } from './storage';
+import { importTripFile } from './transfer';
 import {
   SAMPLE_TRIP, SAMPLE_DEPOSITS, SAMPLE_CHARGES,
   SAMPLE_EXCHANGES, SAMPLE_EXPENSES
 } from './sampleData';
 
 const Stack = createNativeStackNavigator();
+
+function notify(msg) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(msg);
+  } else {
+    Alert.alert('알림', msg);
+  }
+}
 
 function LandingScreen({ navigation }) {
   // 개발용 샘플 데이터 바로 로드
@@ -24,6 +33,27 @@ function LandingScreen({ navigation }) {
       initialExchanges: SAMPLE_EXCHANGES,
       initialExpenses:  SAMPLE_EXPENSES,
     });
+  };
+
+  // JSON 파일에서 여행 데이터 가져오기
+  const handleImport = async () => {
+    try {
+      const data = await importTripFile();
+      if (!data) return; // 취소
+      if (!data.trip.id) data.trip.id = 'trip_' + Date.now();
+      navigation.navigate('Main', {
+        trip: data.trip,
+        initialDeposits:  data.deposits,
+        initialCharges:   data.charges,
+        initialExchanges: data.exchanges,
+        initialAtms:      data.atms,
+        initialRefunds:   data.refunds,
+        initialExpenses:  data.expenses,
+        initialKrwExps:   data.krwExps,
+      });
+    } catch (e) {
+      notify('가져오기에 실패했어요. 올바른 TripPay JSON 파일인지 확인해 주세요.');
+    }
   };
 
   return (
@@ -42,7 +72,7 @@ function LandingScreen({ navigation }) {
           <TouchableOpacity style={styles.btnPrimary} onPress={() => navigation.navigate('Setup')}>
             <Text style={styles.btnPrimaryText}>✈ 새로운 여행 시작</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.btnSecondary}>
+          <TouchableOpacity style={styles.btnSecondary} onPress={handleImport}>
             <Text style={styles.btnSecondaryText}>📂 여행 데이터 가져오기</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('History')}>

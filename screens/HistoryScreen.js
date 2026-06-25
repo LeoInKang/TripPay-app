@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { listTrips, loadTripData, deleteTripData } from '../storage';
+import { exportTripFile } from '../transfer';
 
 export default function HistoryScreen({ navigation }) {
   const [trips, setTrips]       = useState([]);
@@ -49,6 +50,16 @@ export default function HistoryScreen({ navigation }) {
     setConfirmId(null);
     const list = await listTrips();
     setTrips(list);
+  };
+
+  const exportTrip = async (id) => {
+    const data = await loadTripData(id);
+    if (!data) return;
+    try {
+      await exportTripFile(data);
+    } catch (e) {
+      // 내보내기 실패는 조용히 무시 (사용자가 취소했거나 공유 불가)
+    }
   };
 
   const fmtRange = (t) => {
@@ -101,9 +112,14 @@ export default function HistoryScreen({ navigation }) {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <TouchableOpacity style={styles.delBtn} onPress={() => setConfirmId(t.id)}>
-                  <Text style={styles.delText}>삭제</Text>
-                </TouchableOpacity>
+                <View style={styles.actions}>
+                  <TouchableOpacity style={styles.actBtn} onPress={() => exportTrip(t.id)}>
+                    <Text style={styles.actText}>내보내기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.actBtn} onPress={() => setConfirmId(t.id)}>
+                    <Text style={styles.delText}>삭제</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           ))
@@ -150,7 +166,9 @@ const styles = StyleSheet.create({
   cardSub: { fontSize: 12, color: '#6b6b6b', marginTop: 2 },
   cardMeta: { fontSize: 10, color: '#9b9b9b', marginTop: 2 },
 
-  delBtn: { paddingHorizontal: 10, paddingVertical: 8, marginLeft: 8 },
+  actions: { flexDirection: 'column', gap: 4, marginLeft: 8, alignItems: 'flex-end' },
+  actBtn: { paddingHorizontal: 10, paddingVertical: 6 },
+  actText: { fontSize: 12, color: '#1a3a5c', fontWeight: '600' },
   delText: { fontSize: 12, color: '#c0413f', fontWeight: '600' },
 
   confirmRow: { flexDirection: 'row', gap: 6, marginLeft: 8 },

@@ -22,11 +22,13 @@ const TABS = [
 
 export default function MainScreen({ route, navigation }) {
   const {
-    trip,
+    trip: initialTrip,
     initialDeposits=[], initialCharges=[], initialExchanges=[],
     initialAtms=[], initialRefunds=[], initialExpenses=[], initialKrwExps=[],
   } = route.params;
   const [activeTab, setActiveTab] = useState('home');
+
+  const [trip,      setTrip]      = useState(initialTrip);
 
   const [deposits,  setDeposits]  = useState(initialDeposits);
   const [charges,   setCharges]   = useState(initialCharges);
@@ -96,7 +98,7 @@ export default function MainScreen({ route, navigation }) {
           <Text style={styles.tripTitle}>{trip.name}</Text>
         </View>
         <View style={styles.topBarRight}>
-          <TouchableOpacity style={styles.iconBtn}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, onSave: setTrip })}>
             <Text style={styles.iconBtnText}>⚙ 설정</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('History')}>

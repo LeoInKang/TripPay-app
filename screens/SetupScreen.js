@@ -6,17 +6,17 @@ import {
 import FullDateField from '../components/FullDateField';
 
 const COUNTRIES = [
-  { flag:'🇯🇵', name:'일본', code:'JPY', sym:'¥', r100:true },
-  { flag:'🇺🇸', name:'미국', code:'USD', sym:'$', r100:false },
-  { flag:'🇹🇭', name:'태국', code:'THB', sym:'฿', r100:false },
-  { flag:'🇻🇳', name:'베트남', code:'VND', sym:'₫', r100:false },
-  { flag:'🇪🇺', name:'유럽', code:'EUR', sym:'€', r100:false },
-  { flag:'🇬🇧', name:'영국', code:'GBP', sym:'£', r100:false },
-  { flag:'🇦🇺', name:'호주', code:'AUD', sym:'A$', r100:false },
-  { flag:'🇨🇳', name:'중국', code:'CNY', sym:'¥', r100:false },
-  { flag:'🇵🇭', name:'필리핀', code:'PHP', sym:'₱', r100:false },
-  { flag:'🇸🇬', name:'싱가포르', code:'SGD', sym:'S$', r100:false },
-  { flag:'🇨🇦', name:'캐나다', code:'CAD', sym:'C$', r100:false },
+  { flag:'🇯🇵', name:'일본', code:'JPY', sym:'¥', r100:true,  exRate:'930' },
+  { flag:'🇺🇸', name:'미국', code:'USD', sym:'$', r100:false, exRate:'1350' },
+  { flag:'🇹🇭', name:'태국', code:'THB', sym:'฿', r100:false, exRate:'40' },
+  { flag:'🇻🇳', name:'베트남', code:'VND', sym:'₫', r100:false, exRate:'0.055' },
+  { flag:'🇪🇺', name:'유럽', code:'EUR', sym:'€', r100:false, exRate:'1500' },
+  { flag:'🇬🇧', name:'영국', code:'GBP', sym:'£', r100:false, exRate:'1750' },
+  { flag:'🇦🇺', name:'호주', code:'AUD', sym:'A$', r100:false, exRate:'900' },
+  { flag:'🇨🇳', name:'중국', code:'CNY', sym:'¥', r100:false, exRate:'195' },
+  { flag:'🇵🇭', name:'필리핀', code:'PHP', sym:'₱', r100:false, exRate:'24' },
+  { flag:'🇸🇬', name:'싱가포르', code:'SGD', sym:'S$', r100:false, exRate:'1020' },
+  { flag:'🇨🇦', name:'캐나다', code:'CAD', sym:'C$', r100:false, exRate:'980' },
 ];
 
 export default function SetupScreen({ navigation }) {
@@ -26,6 +26,22 @@ export default function SetupScreen({ navigation }) {
   const [members, setMembers] = useState('');
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [note, setNote] = useState('');
+
+  // 시작일 선택 시 종료일이 비어 있으면 다음날로 자동 설정
+  const nextDay = (ymd) => {
+    if (!ymd) return '';
+    const d = new Date(ymd + 'T00:00:00');
+    if (isNaN(d)) return '';
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const handleStartDate = (v) => {
+    setStartDate(v);
+    if (!endDate) setEndDate(nextDay(v));
+  };
 
   const handleStart = () => {
     if (!tripName || !selectedCountry || !members) {
@@ -41,7 +57,10 @@ export default function SetupScreen({ navigation }) {
       members: members.split(',').map(m => m.trim()).filter(Boolean),
       note,
     };
-    navigation.navigate('Main', { trip });
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Main', params: { trip } }],
+    });
   };
 
   return (
@@ -57,7 +76,7 @@ export default function SetupScreen({ navigation }) {
           <Text style={styles.label}>여행명</Text>
           <TextInput
             style={styles.input}
-            placeholder="예) 일본 골프투어"
+            placeholder="여행명"
             value={tripName}
             onChangeText={setTripName}
           />
@@ -66,7 +85,7 @@ export default function SetupScreen({ navigation }) {
         {/* 날짜 */}
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-            <FullDateField label="시작일" value={startDate} onChange={setStartDate} />
+            <FullDateField label="시작일" value={startDate} onChange={handleStartDate} />
           </View>
           <View style={[styles.field, { flex: 1 }]}>
             <FullDateField label="종료일" value={endDate} onChange={setEndDate} />
@@ -111,7 +130,7 @@ export default function SetupScreen({ navigation }) {
           <Text style={styles.label}>메모 (선택)</Text>
           <TextInput
             style={styles.input}
-            placeholder="야마구치현 골프"
+            placeholder="메모"
             value={note}
             onChangeText={setNote}
           />

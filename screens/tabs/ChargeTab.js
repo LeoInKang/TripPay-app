@@ -1,9 +1,17 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView
+  StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import DateField from '../../components/DateField';
+
+function notify(msg) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(msg);
+  } else {
+    Alert.alert('알림', msg);
+  }
+}
 
 const SUB_TABS = [
   { id: 'charge',   icon: '💳', label: '카드충전' },
@@ -144,7 +152,10 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate }) {
   const handleLocal = (v) => { setLocal(v); const r = calcRate(krw, v); if (r) setRate(r); };
 
   const handleAdd = () => {
-    if (!krw || !local) return;
+    if (!krw)   return notify('원화(계좌차감) 금액을 입력해 주세요.');
+    if (!local) return notify('충전 외화 금액을 입력해 주세요.');
+    if (!rate)  return notify('환율을 입력해 주세요.');
+    if (!date)  return notify('날짜를 선택해 주세요.');
     setCharges([...charges, {
       id: Date.now(),
       krw: parseInt(krw.replace(/,/g, '')),
@@ -164,14 +175,14 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate }) {
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>현지화</Text>
+          <Text style={styles.label}>외화</Text>
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
         </View>
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>환율</Text>
-          <TextInput style={styles.input} placeholder="930.00" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+          <TextInput style={styles.input} placeholder={trip.country.exRate ? '예: ' + trip.country.exRate : '환율'} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -201,7 +212,10 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate }) {
   const handleLocal = (v) => { setLocal(v); const r = calcRate(krw, v); if (r) setRate(r); };
 
   const handleAdd = () => {
-    if (!krw || !local) return;
+    if (!krw)   return notify('원화(계좌차감) 금액을 입력해 주세요.');
+    if (!local) return notify('환전 외화 금액을 입력해 주세요.');
+    if (!rate)  return notify('환율을 입력해 주세요.');
+    if (!date)  return notify('날짜를 선택해 주세요.');
     setExchanges([...exchanges, {
       id: Date.now(),
       krw: parseInt(krw.replace(/,/g, '')),
@@ -221,14 +235,14 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate }) {
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>현지화</Text>
+          <Text style={styles.label}>외화</Text>
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
         </View>
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>환율</Text>
-          <TextInput style={styles.input} placeholder="930.00" keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+          <TextInput style={styles.input} placeholder={trip.country.exRate ? '예: ' + trip.country.exRate : '환율'} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -253,7 +267,8 @@ function AtmForm({ trip, atms, setAtms, sym }) {
   const [note, setNote] = useState('');
 
   const handleAdd = () => {
-    if (!local) return;
+    if (!local) return notify('인출 외화 금액을 입력해 주세요.');
+    if (!date)  return notify('날짜를 선택해 주세요.');
     setAtms([...atms, {
       id: Date.now(),
       local: parseInt(local.replace(/,/g, '')),
@@ -271,7 +286,7 @@ function AtmForm({ trip, atms, setAtms, sym }) {
       </Text>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>인출 현지화 금액</Text>
+          <Text style={styles.label}>인출 외화 금액</Text>
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={setLocal} />
         </View>
         <View style={styles.col}>
@@ -318,7 +333,9 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100 }) {
   };
 
   const handleAdd = () => {
-    if (!local || !krw) return;
+    if (!local) return notify('카드 외화 잔액을 입력해 주세요.');
+    if (!krw)   return notify('원화 환급액을 입력해 주세요.');
+    if (!date)  return notify('날짜를 선택해 주세요.');
     setRefunds([...refunds, {
       id: Date.now(),
       local: parseInt(local.replace(/,/g, '')),
@@ -338,7 +355,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100 }) {
       </Text>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>이전 현지화 금액</Text>
+          <Text style={styles.label}>이전 외화 금액</Text>
           <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
         </View>
         <View style={styles.col}>

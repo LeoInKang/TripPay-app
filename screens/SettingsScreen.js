@@ -21,6 +21,22 @@ export default function SettingsScreen({ route, navigation }) {
   const [endDate,   setEndDate]   = useState(trip?.endDate || '');
   const [note,      setNote]      = useState(trip?.note || '');
 
+  // 시작일 선택 시 종료일이 비어 있으면 다음날로 자동 설정
+  const nextDay = (ymd) => {
+    if (!ymd) return '';
+    const d = new Date(ymd + 'T00:00:00');
+    if (isNaN(d)) return '';
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+  const handleStartDate = (v) => {
+    setStartDate(v);
+    if (!endDate) setEndDate(nextDay(v));
+  };
+
   const handleSave = () => {
     if (!tripName.trim()) {
       notify('여행명을 입력해 주세요.');
@@ -52,7 +68,7 @@ export default function SettingsScreen({ route, navigation }) {
           <Text style={styles.label}>여행명</Text>
           <TextInput
             style={styles.input}
-            placeholder="예) 일본 골프투어"
+            placeholder="여행명"
             value={tripName}
             onChangeText={setTripName}
           />
@@ -60,7 +76,7 @@ export default function SettingsScreen({ route, navigation }) {
 
         <View style={styles.row}>
           <View style={[styles.field, { flex: 1, marginRight: 8 }]}>
-            <DateField label="시작일" value={startDate} onChange={setStartDate} />
+            <DateField label="시작일" value={startDate} onChange={handleStartDate} />
           </View>
           <View style={[styles.field, { flex: 1 }]}>
             <DateField label="종료일" value={endDate} onChange={setEndDate} />
@@ -71,7 +87,7 @@ export default function SettingsScreen({ route, navigation }) {
           <Text style={styles.label}>메모 (선택)</Text>
           <TextInput
             style={styles.input}
-            placeholder="야마구치현 골프"
+            placeholder="메모"
             value={note}
             onChangeText={setNote}
           />

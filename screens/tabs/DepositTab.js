@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView
+  StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
 import Segment     from '../../components/Segment';
 import DateField   from '../../components/DateField';
+
+function notify(msg) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(msg);
+  } else {
+    Alert.alert('알림', msg);
+  }
+}
 
 export default function DepositTab({ trip, deposits, setDeposits }) {
   const [member,   setMember]   = useState(trip.members[0]);
@@ -43,7 +51,13 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
   };
 
   const handleAdd = () => {
-    if (!member || !amount) return;
+    if (!member) return notify('참석자를 선택해 주세요.');
+    if (!amount) return notify('회비 금액을 입력해 주세요.');
+    if (currency === 'LOCAL') {
+      if (!rate)     return notify('환율을 입력해 주세요.');
+      if (!krwEquiv) return notify('원화환산이 계산되지 않았어요. 금액과 환율을 확인해 주세요.');
+    }
+    if (!date) return notify('날짜를 선택해 주세요.');
     const a = parseInt(amount.replace(/,/g, '')) || 0;
     const k = currency === 'KRW' ? a : (parseInt((krwEquiv || '').replace(/,/g, '')) || 0);
     setDeposits([...deposits, {
@@ -128,7 +142,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
               <Text style={styles.label}>환율</Text>
               <TextInput
                 style={styles.input}
-                placeholder="930.00"
+                placeholder={trip.country.exRate ? '예: ' + trip.country.exRate : '환율'}
                 keyboardType="decimal-pad"
                 value={rate}
                 onChangeText={handleRateChange}

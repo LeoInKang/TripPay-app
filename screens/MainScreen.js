@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView
@@ -38,14 +38,34 @@ export default function MainScreen({ route, navigation }) {
   const [expenses,  setExpenses]  = useState(initialExpenses);
   const [krwExps,   setKrwExps]   = useState(initialKrwExps);
 
+  // 현재 화면이 들고 있는 여행 id (자동저장 오염 방지용)
+  const loadedTripId = useRef(initialTrip?.id);
+
+  // 다른 여행으로 진입하면(트립 id 변경) 모든 내역 state를 새 params로 재설정.
+  // 화면 인스턴스가 재사용되어 useState가 다시 돌지 않는 경우의 오염을 막는다.
+  useEffect(() => {
+    loadedTripId.current = initialTrip?.id;
+    setTrip(initialTrip);
+    setDeposits(initialDeposits);
+    setCharges(initialCharges);
+    setExchanges(initialExchanges);
+    setAtms(initialAtms);
+    setRefunds(initialRefunds);
+    setExpenses(initialExpenses);
+    setKrwExps(initialKrwExps);
+  }, [initialTrip?.id]);
+
   // 이 여행을 현재(활성) 여행으로 표시 -> 앱 재시작 시 자동 복원 대상
   useEffect(() => {
     if (trip?.id) setCurrentTripId(trip.id);
   }, [trip?.id]);
 
-  // 데이터 변경 시 자동 저장
+  // 데이터 변경 시 자동 저장.
+  // 단, 화면 state가 가리키는 여행(trip.id)과 방금 로드한 여행(loadedTripId)이
+  // 일치할 때만 저장한다. 여행 전환 직후 옛 state가 새 슬롯에 섞여 저장되는 것을 막는다.
   useEffect(() => {
     if (!trip?.id) return;
+    if (trip.id !== loadedTripId.current) return;
     saveTripData(trip.id, {
       trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps,
     });

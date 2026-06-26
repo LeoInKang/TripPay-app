@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView
+  StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import Segment     from '../../components/Segment';
 import BottomSheet from '../../components/BottomSheet';
 import DateField   from '../../components/DateField';
+
+function notify(msg) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(msg);
+  } else {
+    Alert.alert('알림', msg);
+  }
+}
 
 export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const sym = trip.country.sym;
@@ -41,7 +49,9 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
   const payerOptions = ['공통', ...trip.members].map(m => ({ value: m, label: m }));
 
   const handleAdd = () => {
-    if (!name || !amt) return;
+    if (!name) return notify('항목명을 입력해 주세요.');
+    if (!amt)  return notify('금액을 입력해 주세요.');
+    if (!date) return notify('날짜를 선택해 주세요.');
     setExpenses([...expenses, {
       id: Date.now(),
       name,
@@ -64,7 +74,7 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
           <Text style={styles.label}>항목명</Text>
           <TextInput
             style={styles.input}
-            placeholder="예: 골프장 그린피"
+            placeholder="항목명"
             value={name}
             onChangeText={setName}
           />
@@ -139,7 +149,9 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
   const payerOptions = ['공통', ...trip.members].map(m => ({ value: m, label: m }));
 
   const handleAdd = () => {
-    if (!name || !amt) return;
+    if (!name) return notify('항목명을 입력해 주세요.');
+    if (!amt)  return notify('금액을 입력해 주세요.');
+    if (!date) return notify('날짜를 선택해 주세요.');
     setKrwExps([...krwExps, {
       id: Date.now(),
       name,
@@ -160,7 +172,7 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
           <Text style={styles.label}>항목명</Text>
           <TextInput
             style={styles.input}
-            placeholder="예: 공항 주차"
+            placeholder="항목명"
             value={name}
             onChangeText={setName}
           />

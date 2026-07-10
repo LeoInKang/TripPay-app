@@ -15,6 +15,13 @@ function notify(msg) {
   }
 }
 
+// 정수 금액용 천단위 콤마 포맷
+function fmtInt(v) {
+  const digits = (v || '').toString().replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  return parseInt(digits, 10).toLocaleString('ko-KR');
+}
+
 export default function DepositTab({ trip, deposits, setDeposits }) {
   const [member,   setMember]   = useState(trip.members[0]);
   const [currency, setCurrency] = useState('KRW');
@@ -23,6 +30,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
   const [krwEquiv, setKrwEquiv] = useState('');
   const [date,     setDate]     = useState('');
   const [note,     setNote]     = useState('');
+  const [editId,   setEditId]   = useState(null);
 
   const sym  = trip.country.sym;
   const r100 = trip.country.r100;
@@ -34,7 +42,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
   ];
 
   const handleAmtChange = (v) => {
-    setAmount(v);
+    setAmount(fmtInt(v));
     const n = parseInt(v.replace(/,/g, '')) || 0;
     if (currency === 'LOCAL' && rate && n) {
       const k = r100 ? n * parseFloat(rate) / 100 : n * parseFloat(rate);
@@ -50,7 +58,14 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
     }
   };
 
-  const handleAdd = () => {
+  const resetForm = () => {
+    setEditId(null);
+    setMember(trip.members[0]);
+    setCurrency('KRW');
+    setAmount(''); setRate(''); setKrwEquiv(''); setDate(''); setNote('');
+  };
+
+  const handleSubmit = () => {
     if (!member) return notify('참석자를 선택해 주세요.');
     if (!amount) return notify('회비 금액을 입력해 주세요.');
     if (currency === 'LOCAL') {
@@ -60,8 +75,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
     if (!date) return notify('날짜를 선택해 주세요.');
     const a = parseInt(amount.replace(/,/g, '')) || 0;
     const k = currency === 'KRW' ? a : (parseInt((krwEquiv || '').replace(/,/g, '')) || 0);
-    setDeposits([...deposits, {
-      id: Date.now(),
+    const payload = {
       mem: member,
       cur: currency,
       amt: a,
@@ -69,19 +83,40 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
       krwEquiv: k,
       date,
       note,
-    }]);
-    setAmount(''); setRate(''); setKrwEquiv(''); setNote('');
+    };
+    if (editId != null) {
+      setDeposits(deposits.map(d => d.id === editId ? { ...d, ...payload } : d));
+    } else {
+      setDeposits([...deposits, { id: Date.now(), ...payload }]);
+    }
+    resetForm();
+  };
+
+  const handleEdit = (d) => {
+    setEditId(d.id);
+    setMember(d.mem);
+    setCurrency(d.cur);
+    setAmount(d.amt != null ? fmtInt(String(d.amt)) : '');
+    if (d.cur === 'LOCAL') {
+      setRate(d.rate != null ? String(d.rate) : '');
+      setKrwEquiv(d.krwEquiv != null ? Number(d.krwEquiv).toLocaleString('ko-KR') : '');
+    } else {
+      setRate(''); setKrwEquiv('');
+    }
+    setDate(d.date || '');
+    setNote(d.note || '');
   };
 
   const handleDelete = (id) => {
     setDeposits(deposits.filter(d => d.id !== id));
+    if (editId === id) resetForm();
   };
 
   const [confirmKey, setConfirmKey] = useState(null);
-  const renderDel = (rowKey, onDelete) => (
+  const renderRowActions = (rowKey, d) => (
     confirmKey === rowKey ? (
       <View style={styles.delWrap}>
-        <TouchableOpacity style={[styles.confirmBtn, styles.confirmYes]} onPress={() => { onDelete(); setConfirmKey(null); }}>
+        <TouchableOpacity style={[styles.confirmBtn, styles.confirmYes]} onPress={() => { handleDelete(d.id); setConfirmKey(null); }}>
           <Text style={styles.confirmYesText}>삭제</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[styles.confirmBtn, styles.confirmNo]} onPress={() => setConfirmKey(null)}>
@@ -89,9 +124,14 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
         </TouchableOpacity>
       </View>
     ) : (
-      <TouchableOpacity style={styles.delBtn} onPress={() => setConfirmKey(rowKey)} hitSlop={8}>
-        <Text style={styles.delText}>✕</Text>
-      </TouchableOpacity>
+      <View style={styles.actWrap}>
+        <TouchableOpacity style={styles.editBtn} onPress={() => handleEdit(d)} hitSlop={6}>
+          <Text style={styles.editText}>수정</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.delBtn} onPress={() => setConfirmKey(rowKey)} hitSlop={6}>
+          <Text style={styles.delText}>✕</Text>
+        </TouchableOpacity>
+      </View>
     )
   );
 
@@ -101,8 +141,15 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* 입력 폼 */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>회비 납부</Text>
+      <View style={[styles.card, editId != null && styles.cardEditing]}>
+        <View style={styles.titleRow}>
+          <Text style={styles.cardTitle}>{editId != null ? '회비 수정' : '회비 납부'}</Text>
+          {editId != null && (
+            <TouchableOpacity onPress={resetForm} hitSlop={8}>
+              <Text style={styles.cancelEdit}>취소</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 1줄: 참석자(바텀시트) | 통화(세그먼트) | 회비(입력) */}
         <View style={styles.formRow}>
@@ -176,8 +223,8 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
           </View>
         </View>
 
-        <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
-          <Text style={styles.addBtnText}>+ 회비납부</Text>
+        <TouchableOpacity style={styles.addBtn} onPress={handleSubmit} activeOpacity={0.8}>
+          <Text style={styles.addBtnText}>{editId != null ? '수정 저장' : '+ 회비납부'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -193,7 +240,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
               <View>
                 <Text style={styles.groupLabel}>원화 회비</Text>
                 {krwDeps.map(d => (
-                  <View key={d.id} style={styles.depRow}>
+                  <View key={d.id} style={[styles.depRow, editId === d.id && styles.depRowEditing]}>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{d.mem[0]}</Text>
                     </View>
@@ -211,7 +258,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
                     <Text style={styles.depAmt}>
                       ₩{(d.krwEquiv || d.amt || 0).toLocaleString('ko-KR')}
                     </Text>
-                    {renderDel('d-' + d.id, () => handleDelete(d.id))}
+                    {renderRowActions('d-' + d.id, d)}
                   </View>
                 ))}
               </View>
@@ -221,7 +268,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
               <View style={{ marginTop: 12 }}>
                 <Text style={styles.groupLabel}>외화 회비납부</Text>
                 {localDeps.map(d => (
-                  <View key={d.id} style={styles.depRow}>
+                  <View key={d.id} style={[styles.depRow, editId === d.id && styles.depRowEditing]}>
                     <View style={styles.avatar}>
                       <Text style={styles.avatarText}>{d.mem[0]}</Text>
                     </View>
@@ -242,7 +289,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
                       <Text style={styles.depAmt}>{sym}{d.amt.toLocaleString('ko-KR')}</Text>
                       <Text style={styles.depAmtKrw}>≈₩{(d.krwEquiv || 0).toLocaleString('ko-KR')}</Text>
                     </View>
-                    {renderDel('d-' + d.id, () => handleDelete(d.id))}
+                    {renderRowActions('d-' + d.id, d)}
                   </View>
                 ))}
               </View>
@@ -265,7 +312,10 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.08)',
   },
+  cardEditing: { borderColor: '#378ADD', borderWidth: 1.2 },
+  titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 12 },
+  cancelEdit: { fontSize: 13, color: '#378ADD', fontWeight: '600', marginBottom: 12 },
   formRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   col: { flex: 1 },
   label: { fontSize: 11, fontWeight: '600', color: '#6b6b6b', marginBottom: 4 },
@@ -295,6 +345,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: 'rgba(0,0,0,0.06)',
   },
+  depRowEditing: { backgroundColor: '#f0f6ff', borderRadius: 8 },
   avatar: {
     width: 30, height: 30, borderRadius: 15,
     backgroundColor: '#f0f0f0',
@@ -313,7 +364,10 @@ const styles = StyleSheet.create({
   depAmtBox: { alignItems: 'flex-end' },
   depAmt: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   depAmtKrw: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
-  delBtn: { marginLeft: 8, padding: 4 },
+  actWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 8 },
+  editBtn: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, backgroundColor: '#eef4fb' },
+  editText: { fontSize: 12, color: '#0c447c', fontWeight: '700' },
+  delBtn: { padding: 4 },
   delText: { fontSize: 14, color: '#c0413f', fontWeight: '700' },
   delWrap: { flexDirection: 'row', gap: 6, marginLeft: 8 },
   confirmBtn: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },

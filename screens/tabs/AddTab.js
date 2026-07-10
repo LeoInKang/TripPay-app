@@ -15,6 +15,13 @@ function notify(msg) {
   }
 }
 
+// 정수 금액용 천단위 콤마 포맷 (숫자만 남기고 콤마 삽입)
+function fmtInt(v) {
+  const digits = (v || '').toString().replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  return parseInt(digits, 10).toLocaleString('ko-KR');
+}
+
 export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const sym = trip.country.sym;
   const payMethods = trip.payMethods || ['트레블월렛', '현금'];
@@ -90,7 +97,7 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
             placeholder="0"
             keyboardType="numeric"
             value={amt}
-            onChangeText={setAmt}
+            onChangeText={v => setAmt(fmtInt(v))}
           />
         </View>
         <View style={[styles.col, { flex: 1.3 }]}>
@@ -184,7 +191,7 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
             placeholder="0"
             keyboardType="numeric"
             value={amt}
-            onChangeText={setAmt}
+            onChangeText={v => setAmt(fmtInt(v))}
           />
         </View>
       </View>

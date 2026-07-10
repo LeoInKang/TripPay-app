@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Platform, StyleSheet, Modal, Pressable } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 // 연도까지 포함한 날짜(YYYY-MM-DD)를 다루는 달력 입력
 export default function FullDateField({ label, value, onChange, placeholder = '날짜 선택' }) {
   const [show, setShow] = useState(false);
+  const [temp, setTemp] = useState(null);
 
   const toDate = (v) => {
     if (!v) return new Date();
@@ -18,7 +19,9 @@ export default function FullDateField({ label, value, onChange, placeholder = '�
     return `${yy}-${mm}-${dd}`;
   };
 
-  // 웹: native input[type=date] (값/반환 모두 YYYY-MM-DD)
+  const display = value || placeholder;
+
+  // 웹: native input[type=date]
   if (Platform.OS === 'web') {
     return (
       <View>
@@ -43,11 +46,48 @@ export default function FullDateField({ label, value, onChange, placeholder = '�
     );
   }
 
-  const display = value || placeholder;
+  // iOS: 하단 시트 달력
+  if (Platform.OS === 'ios') {
+    const open = () => { setTemp(toDate(value)); setShow(true); };
+    const confirm = () => { if (temp) onChange(fromDate(temp)); setShow(false); };
+    return (
+      <View>
+        {label && <Text style={styles.label}>{label}</Text>}
+        <TouchableOpacity style={styles.field} onPress={open} activeOpacity={0.7}>
+          <Text style={[styles.value, !value && styles.placeholder]}>📅 {display}</Text>
+        </TouchableOpacity>
+        <Modal visible={show} transparent animationType="slide" onRequestClose={() => setShow(false)}>
+          <Pressable style={styles.backdrop} onPress={() => setShow(false)}>
+            <Pressable style={styles.sheet} onPress={() => {}}>
+              <View style={styles.sheetHeader}>
+                <TouchableOpacity onPress={() => setShow(false)}>
+                  <Text style={styles.cancelBtn}>취소</Text>
+                </TouchableOpacity>
+                <Text style={styles.sheetTitle}>{label || '날짜 선택'}</Text>
+                <TouchableOpacity onPress={confirm}>
+                  <Text style={styles.doneBtn}>완료</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={temp || toDate(value)}
+                mode="date"
+                display="inline"
+                locale="ko-KR"
+                onChange={(event, selected) => { if (selected) setTemp(selected); }}
+                style={styles.picker}
+              />
+            </Pressable>
+          </Pressable>
+        </Modal>
+      </View>
+    );
+  }
+
+  // Android: 기본 팝업 피커
   return (
     <View>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TouchableOpacity style={styles.field} onPress={() => setShow(true)}>
+      <TouchableOpacity style={styles.field} onPress={() => setShow(true)} activeOpacity={0.7}>
         <Text style={[styles.value, !value && styles.placeholder]}>📅 {display}</Text>
       </TouchableOpacity>
       {show && (
@@ -55,8 +95,9 @@ export default function FullDateField({ label, value, onChange, placeholder = '�
           value={toDate(value)}
           mode="date"
           display="default"
+          locale="ko-KR"
           onChange={(event, selected) => {
-            setShow(Platform.OS === 'ios');
+            setShow(false);
             if (selected) onChange(fromDate(selected));
           }}
         />
@@ -77,4 +118,25 @@ const styles = StyleSheet.create({
   },
   value: { fontSize: 14, color: '#1a1a1a' },
   placeholder: { color: '#c0c0c0' },
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 24,
+    paddingHorizontal: 8,
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  sheetTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a' },
+  cancelBtn: { fontSize: 15, color: '#9b9b9b' },
+  doneBtn: { fontSize: 15, color: '#378ADD', fontWeight: '700' },
+  picker: { alignSelf: 'stretch' },
 });

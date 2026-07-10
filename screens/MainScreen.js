@@ -214,32 +214,32 @@ const styles = StyleSheet.create({
   // 상단 탭바
   tabBarScroll: {
     backgroundColor: '#f0eee8',
-    maxHeight: 64,
+    maxHeight: 84,
     flexGrow: 0,
   },
   tabBarContent: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 6,
     paddingVertical: 10,
-    gap: 8,
+    gap: 5,
     alignItems: 'center',
   },
   tabItem: {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
+    paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
     backgroundColor: 'transparent',
-    minWidth: 64,
+    minWidth: 56,
   },
   tabItemActive: {
     backgroundColor: '#fff',
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.08)',
   },
-  tabIcon: { fontSize: 18, marginBottom: 2 },
-  tabLabel: { fontSize: 11, color: '#9b9b9b', fontWeight: '500' },
+  tabIcon: { fontSize: 30, marginBottom: 3 },
+  tabLabel: { fontSize: 13, color: '#9b9b9b', fontWeight: '500' },
   tabLabelActive: { color: '#1a1a1a', fontWeight: '700' },
 
   // 컨텐츠

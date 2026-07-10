@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ScrollView, SafeAreaView, Platform, Alert
+  StyleSheet, ScrollView, SafeAreaView, Platform, Alert, StatusBar
 } from 'react-native';
 import DateField from '../components/FullDateField';
 
@@ -113,7 +113,11 @@ export default function SettingsScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f0' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f0',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+  },
 
   header: {
     flexDirection: 'row',

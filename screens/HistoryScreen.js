@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, SafeAreaView,
+  StatusBar, Platform
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { listTrips, loadTripData, deleteTripData } from '../storage';
@@ -130,7 +131,11 @@ export default function HistoryScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0eee8' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f0eee8',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+  },
 
   header: {
     flexDirection: 'row',

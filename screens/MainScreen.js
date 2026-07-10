@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  SafeAreaView, ScrollView
+  SafeAreaView, ScrollView, StatusBar, Platform
 } from 'react-native';
 import HomeTab    from './tabs/HomeTab';
 import DepositTab from './tabs/DepositTab';
@@ -107,15 +107,13 @@ export default function MainScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 상단 헤더: TripPay · 여행명 | 설정 | 히스토리 | 홈 */}
+      {/* 상단 헤더: TripPay | 설정 | 히스토리 | 홈 */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
           <Text style={styles.brandText}>
             <Text style={styles.brandTrip}>Trip</Text>
             <Text style={styles.brandPay}>Pay</Text>
           </Text>
-          <Text style={styles.brandDot}> · </Text>
-          <Text style={styles.tripTitle}>{trip.name}</Text>
         </View>
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, onSave: setTrip })}>
@@ -135,6 +133,7 @@ export default function MainScreen({ route, navigation }) {
 
       {/* 정보 라인 */}
       <View style={styles.infoBar}>
+        <Text style={styles.tripTitle} numberOfLines={1}>{trip.name}</Text>
         <Text style={styles.infoLine1}>
           {formatDateRange()}{trip.note ? ' · ' + trip.note : ''}
         </Text>
@@ -171,7 +170,11 @@ export default function MainScreen({ route, navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f0eee8' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f0eee8',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+  },
 
   // 상단 헤더 (TripPay 브랜드 + 설정/히스토리/홈)
   topBar: {
@@ -188,7 +191,7 @@ const styles = StyleSheet.create({
   brandTrip: { color: '#1a3a5c' },
   brandPay:  { color: '#378ADD' },
   brandDot:  { color: '#9b9b9b', fontSize: 14 },
-  tripTitle: { fontSize: 14, fontWeight: '600', color: '#1a1a1a', flexShrink: 1 },
+  tripTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
   iconBtn: {
     backgroundColor: '#fff',
     borderRadius: 20,

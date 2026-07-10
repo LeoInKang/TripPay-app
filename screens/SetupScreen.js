@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, SafeAreaView,
-  KeyboardAvoidingView, Platform
+  KeyboardAvoidingView, Platform, StatusBar
 } from 'react-native';
 import FullDateField from '../components/FullDateField';
 
@@ -161,7 +161,11 @@ export default function SetupScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f0' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f0',
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
+  },
   scroll: { padding: 20, paddingBottom: 120 },
   title: { fontSize: 24, fontWeight: '800', color: '#1a3a5c', marginBottom: 24 },
   backBtn: { marginBottom: 12 },

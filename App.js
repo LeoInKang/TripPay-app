@@ -79,10 +79,12 @@ function LandingScreen({ navigation }) {
           <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('History')}>
             <Text style={styles.btnSecondaryText}>📋 히스토리</Text>
           </TouchableOpacity>
-          {/* 개발용 */}
-          <TouchableOpacity style={styles.btnDev} onPress={loadSample}>
-            <Text style={styles.btnDevText}>🧪 샘플 데이터 로드 (개발용)</Text>
-          </TouchableOpacity>
+          {/* 개발용: 출시 빌드(__DEV__ === false)에서는 자동으로 숨겨짐 */}
+          {__DEV__ && (
+            <TouchableOpacity style={styles.btnDev} onPress={loadSample}>
+              <Text style={styles.btnDevText}>🧪 샘플 데이터 로드 (개발용)</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <Text style={styles.version}>TripPay v1.0</Text>
       </View>

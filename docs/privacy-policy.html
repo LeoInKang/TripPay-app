@@ -17,36 +17,52 @@
   a { color: #2E76C2; }
   .lang { margin-top: 56px; padding-top: 8px; border-top: 2px solid #e5e7eb; }
   code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; }
+  .callout { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 8px; padding: 12px 16px; margin: 16px 0; }
 </style>
 </head>
 <body>
 
 <h1>TripPay 개인정보처리방침</h1>
-<p class="meta">앱 이름: TripPay (단체여행 공금관리) &middot; 시행일: 2026년 7월 11일</p>
+<p class="meta">앱 이름: TripPay (단체여행 공금관리) &middot; 시행일: 2026년 8월 4일 (개정) &middot; 최초 시행일: 2026년 7월 11일</p>
 
 <h2>1. 개요</h2>
 <p>TripPay(이하 "본 앱")는 단체여행의 공금(회비·충전·지출·정산)을 관리하기 위한 모바일 애플리케이션입니다. 본 방침은 본 앱이 사용자의 정보를 어떻게 취급하는지 설명합니다.</p>
 
 <h2>2. 수집하는 개인정보</h2>
-<p>본 앱은 사용자의 개인정보를 서버로 수집하거나 외부로 전송하지 않습니다. 회원가입이 없으며, 이름·이메일·전화번호·위치 등 어떠한 개인 식별 정보도 요구하거나 수집하지 않습니다.</p>
+<p>본 앱은 회원가입이 없으며, 이름·이메일·전화번호·위치 등 어떠한 개인 식별 정보도 요구하지 않습니다. 개발자가 사용자 몰래 또는 자동으로 수집하는 정보는 없습니다.</p>
+<p>다만 사용자가 <strong>직접 링크 공유 기능을 실행한 경우에 한해</strong> 해당 여행의 데이터가 외부 서비스로 전송됩니다. 무엇이 전송되고 누가 볼 수 있는지는 아래 <a href="#share">6. 내보내기·가져오기 및 링크 공유</a>에서 자세히 설명합니다.</p>
 
 <h2>3. 데이터의 저장 위치</h2>
-<p>사용자가 본 앱에 입력하는 모든 데이터(여행 이름, 날짜, 참여자, 회비, 충전·환전 내역, 지출 내역, 메모 등)는 <strong>오직 사용자의 기기 내부 저장소에만</strong> 저장됩니다. 이 데이터는 개발자를 포함한 제3자가 접근할 수 없으며, 외부 서버로 전송되지 않습니다.</p>
+<p>사용자가 본 앱에 입력하는 모든 데이터(여행 이름, 날짜, 참여자, 회비, 충전·환전 내역, 지출 내역, 메모 등)는 <strong>기본적으로 사용자의 기기 내부 저장소에만</strong> 저장됩니다. 앱을 사용하는 것만으로는 어떤 데이터도 외부로 전송되지 않습니다.</p>
+<p>유일한 예외는 사용자가 링크 공유를 실행한 경우이며, 이때 전송된 데이터는 외부 서비스에 보관됩니다(6항 참조).</p>
 
 <h2>4. 데이터의 이용</h2>
-<p>기기에 저장된 데이터는 본 앱의 공금 관리 기능(입력·조회·수정·정산)을 제공하기 위한 목적으로만 기기 내에서 사용됩니다.</p>
+<p>기기에 저장된 데이터는 본 앱의 공금 관리 기능(입력·조회·수정·정산)을 제공하기 위한 목적으로만 사용됩니다. 개발자는 사용자의 여행 데이터를 광고, 프로파일링, 통계 등 다른 목적으로 이용하지 않습니다.</p>
 
 <h2>5. 제3자 제공 및 광고·분석</h2>
-<p>본 앱은 사용자 데이터를 제3자에게 판매·제공·공유하지 않습니다. 본 앱에는 광고 SDK, 분석 도구, 트래킹 도구가 포함되어 있지 않습니다.</p>
+<p>본 앱은 사용자 데이터를 제3자에게 판매하지 않습니다. 본 앱에는 광고 SDK, 분석 도구, 트래킹 도구가 포함되어 있지 않습니다.</p>
+<p>단, 링크 공유 기능은 데이터 저장을 위해 제3자 서비스인 <strong>JSONBin.io</strong>를 이용합니다. 사용자가 공유를 실행하면 해당 여행 데이터가 이 서비스의 서버에 저장되며, 이후에는 해당 서비스의 정책에 따라 취급됩니다.</p>
 
-<h2>6. 내보내기 및 가져오기</h2>
-<p>본 앱은 사용자가 직접 데이터를 백업·공유할 수 있는 내보내기/가져오기 기능을 제공합니다. 이 기능은 <strong>사용자가 직접 실행할 때에 한하여</strong>, 사용자가 선택한 대상(메신저, 파일 앱 등)으로 데이터를 전달합니다. 개발자는 이 과정에 관여하지 않으며 해당 데이터에 접근할 수 없습니다.</p>
+<h2 id="share">6. 내보내기·가져오기 및 링크 공유</h2>
+<p><strong>내보내기 / 가져오기</strong> — 본 앱은 사용자가 직접 데이터를 백업·이전할 수 있는 파일 내보내기/가져오기 기능을 제공합니다. 이 기능은 <strong>사용자가 직접 실행할 때에 한하여</strong>, 사용자가 선택한 대상(메신저, 파일 앱 등)으로 파일을 전달합니다. 개발자는 이 과정에 관여하지 않으며 해당 데이터에 접근할 수 없습니다.</p>
+
+<p><strong>링크 공유</strong> — 정산 화면의 "참석자에게 공유하기"를 누르면, 해당 여행의 데이터가 외부 서비스(JSONBin.io)에 업로드되고 열람용 링크가 만들어집니다. 이 기능을 사용하기 전에 아래 내용을 확인해 주십시오.</p>
+<div class="callout">
+<ul>
+  <li><strong>전송되는 내용</strong>: 여행 이름, 기간, 메모, <strong>참석자 이름</strong>, 참석자별 회비 납부 내역, <strong>지출 내역(항목명·금액·메모 포함)</strong>, 잔액 및 평균환율. 요약이 아니라 해당 여행의 전체 내역이 전송됩니다.</li>
+  <li><strong>열람 범위</strong>: 생성된 링크에는 별도의 비밀번호나 인증이 없습니다. <strong>링크를 알고 있는 사람은 누구나</strong> 내용을 열람할 수 있습니다.</li>
+  <li><strong>보관 기간</strong>: 업로드된 내용은 기한 없이 남을 수 있으며, <strong>본 앱은 이를 삭제할 수단을 제공하지 않습니다.</strong> 앱을 삭제하더라도 이미 업로드된 내용은 사라지지 않습니다.</li>
+  <li><strong>실행 시점</strong>: 위 전송은 사용자가 공유 버튼을 누른 경우에만 발생합니다. 앱을 그냥 사용하는 동안에는 전송되지 않습니다.</li>
+</ul>
+</div>
+<p>공유 링크에는 참석자의 이름과 금액이 포함되므로, 링크를 전달할 대상을 신중히 결정해 주십시오.</p>
 
 <h2>7. 권한</h2>
 <p>본 앱은 위치, 연락처, 카메라, 마이크 등 민감한 권한을 수집 목적으로 사용하지 않습니다. 내보내기/가져오기 시 운영체제가 제공하는 공유 및 파일 선택 기능을 사용합니다.</p>
 
 <h2>8. 데이터 보관 및 삭제</h2>
-<p>모든 데이터는 사용자 기기에만 보관됩니다. 사용자는 앱 내에서 개별 여행을 삭제하거나, 앱을 삭제(또는 앱 데이터 삭제)함으로써 저장된 데이터를 언제든지 완전히 제거할 수 있습니다.</p>
+<p>기기에 저장된 데이터는 사용자 기기에만 보관됩니다. 사용자는 앱 내에서 개별 여행을 삭제하거나, 앱을 삭제(또는 앱 데이터 삭제)함으로써 기기에 저장된 데이터를 언제든지 완전히 제거할 수 있습니다.</p>
+<p><strong>다만 링크 공유로 업로드된 내용은 위 방법으로 삭제되지 않습니다.</strong> 본 앱은 업로드된 내용을 삭제하는 기능을 제공하지 않으므로, 공유 여부는 신중히 결정해 주십시오. 특정 공유 내용의 삭제가 필요한 경우 아래 문의처로 연락해 주시면 가능한 범위에서 협조하겠습니다.</p>
 
 <h2>9. 아동의 개인정보</h2>
 <p>본 앱은 특정 연령대를 대상으로 하지 않으며, 아동으로부터 개인정보를 수집하지 않습니다.</p>
@@ -60,31 +76,46 @@
 
 <div class="lang">
 <h1>TripPay Privacy Policy</h1>
-<p class="meta">App: TripPay (group travel shared-fund manager) &middot; Effective date: July 11, 2026</p>
+<p class="meta">App: TripPay (group travel shared-fund manager) &middot; Effective date: August 4, 2026 (revised) &middot; Originally effective: July 11, 2026</p>
 
 <h2>1. Overview</h2>
 <p>TripPay ("the App") is a mobile application for managing shared funds (member fees, top-ups, expenses, and settlement) during group travel. This policy explains how the App handles your information.</p>
 
 <h2>2. Information We Collect</h2>
-<p>The App does not collect or transmit any personal information to any server. There is no sign-up, and the App does not request or collect any personally identifiable information such as name, email, phone number, or location.</p>
+<p>The App has no sign-up and does not request any personally identifiable information such as name, email, phone number, or location. The developer collects nothing automatically or without your knowledge.</p>
+<p>However, if you choose to use the link sharing feature, that trip's data is sent to an external service. What is sent and who can see it is described in <a href="#share-en">6. Export, Import, and Link Sharing</a>.</p>
 
 <h2>3. Where Data Is Stored</h2>
-<p>All data you enter (trip names, dates, participants, fees, top-up/exchange records, expenses, notes, etc.) is stored <strong>only in your device's local storage</strong>. This data cannot be accessed by any third party, including the developer, and is never sent to an external server.</p>
+<p>All data you enter (trip names, dates, participants, fees, top-up/exchange records, expenses, notes, etc.) is stored <strong>only in your device's local storage</strong> by default. Simply using the App sends no data anywhere.</p>
+<p>The only exception is when you use link sharing; data sent that way is stored on an external service (see section 6).</p>
 
 <h2>4. How Data Is Used</h2>
-<p>Locally stored data is used solely on your device to provide the App's fund-management features (entry, viewing, editing, and settlement).</p>
+<p>Locally stored data is used solely to provide the App's fund-management features (entry, viewing, editing, and settlement). The developer does not use your trip data for advertising, profiling, or analytics.</p>
 
 <h2>5. Third Parties, Ads, and Analytics</h2>
-<p>The App does not sell, share, or provide user data to third parties. The App contains no advertising SDKs, analytics, or tracking tools.</p>
+<p>The App does not sell user data to third parties. The App contains no advertising SDKs, analytics, or tracking tools.</p>
+<p>However, the link sharing feature uses a third-party service, <strong>JSONBin.io</strong>, to store the shared data. When you share, that trip's data is stored on that service's servers and is thereafter subject to that service's policies.</p>
 
-<h2>6. Export and Import</h2>
-<p>The App provides export/import features so you can back up or share your data. These features transfer data only to a destination you choose (a messenger, a files app, etc.) and only when you initiate them. The developer is not involved in this process and cannot access the data.</p>
+<h2 id="share-en">6. Export, Import, and Link Sharing</h2>
+<p><strong>Export / Import</strong> — The App lets you back up or transfer your data as a file. This happens <strong>only when you initiate it</strong>, and the file goes to a destination you choose (a messenger, a files app, etc.). The developer is not involved and cannot access the data.</p>
+
+<p><strong>Link sharing</strong> — Tapping "Share with attendees" on the settlement screen uploads that trip's data to an external service (JSONBin.io) and creates a viewable link. Please review the following before using it.</p>
+<div class="callout">
+<ul>
+  <li><strong>What is sent</strong>: trip name, dates, notes, <strong>attendee names</strong>, each attendee's fee payments, <strong>expense records including item names, amounts, and memos</strong>, balances, and the average exchange rate. The full record is sent, not a summary.</li>
+  <li><strong>Who can view it</strong>: the generated link has no password or authentication. <strong>Anyone who knows the link can view the contents.</strong></li>
+  <li><strong>Retention</strong>: uploaded content may remain indefinitely, and <strong>the App provides no way to delete it.</strong> Uninstalling the App does not remove content already uploaded.</li>
+  <li><strong>When it happens</strong>: this transfer occurs only when you tap the share button. Nothing is transmitted during ordinary use of the App.</li>
+</ul>
+</div>
+<p>Because a shared link contains attendee names and amounts, please consider carefully who you send it to.</p>
 
 <h2>7. Permissions</h2>
 <p>The App does not use sensitive permissions such as location, contacts, camera, or microphone for data collection. Export/import uses the operating system's built-in sharing and file-selection features.</p>
 
 <h2>8. Data Retention and Deletion</h2>
-<p>All data is kept only on your device. You can permanently remove stored data at any time by deleting individual trips within the App, or by uninstalling the App (or clearing its data).</p>
+<p>Data stored on your device stays on your device. You can permanently remove it at any time by deleting individual trips within the App, or by uninstalling the App (or clearing its data).</p>
+<p><strong>However, content uploaded through link sharing is not removed this way.</strong> The App provides no feature to delete uploaded content, so please decide carefully before sharing. If you need specific shared content removed, contact us at the address below and we will assist where possible.</p>
 
 <h2>9. Children's Privacy</h2>
 <p>The App is not directed to any particular age group and does not knowingly collect personal information from children.</p>

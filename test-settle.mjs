@@ -217,5 +217,39 @@ eq('16 금액 미입력은 통과', checkFixedSplit({ participants: ['A'], split
   eq('19 부담 합계 = 지출액', rr.perMember.reduce((s, p) => s + p.owed, 0), 100000);
 }
 
+// 20) 외화 고정액: 건별 환산 반올림으로 새는 잔여를 보정한다 (합계가 지출액과 같을 때만)
+{
+  const RATE = 929.3971428571428; // 샘플 여행 평균환율 (100¥ 기준)
+  const toKrw = (v) => Math.round((v * RATE) / 100);
+  const parts = ['A', 'B'];
+
+  // 12,000 + 8,000 = 20,000 → 사용자 의도는 전액 분배. 건별 환산하면 1원이 더 잡힌다.
+  const matched = computeSettlement({
+    members: parts, r100: true, avgRate: RATE,
+    expenses: [{ name: '고정액', amt: 20000, participants: parts,
+      split: { mode: 'fixed', values: { A: 12000, B: 8000 } } }],
+  });
+  eq('20 외화 고정액 부담합계 = 지출 환산액',
+    matched.perMember.reduce((s, p) => s + p.owed, 0), toKrw(20000));
+  eq('20 보정 전이었다면 1원 초과였음', toKrw(12000) + toKrw(8000) - toKrw(20000), 1);
+
+  // 합계가 애초에 지출액과 다르면 손대지 않는다 (검증에서 걸러야 할 데이터를 숨기지 않음)
+  const mismatched = computeSettlement({
+    members: parts, r100: true, avgRate: RATE,
+    expenses: [{ name: '고정액', amt: 20000, participants: parts,
+      split: { mode: 'fixed', values: { A: 12000, B: 7000 } } }],
+  });
+  eq('20 합계 불일치는 보정 안 함',
+    mismatched.perMember.reduce((s, p) => s + p.owed, 0), toKrw(12000) + toKrw(7000));
+
+  // 원화 고정액은 환산이 없으므로 종전대로 그대로 유지
+  const krw = computeSettlement({
+    members: parts,
+    krwExps: [{ name: '고정액', amt: 100000, participants: parts,
+      split: { mode: 'fixed', values: { A: 30000, B: 30000 } } }],
+  });
+  eq('20 원화 고정액은 그대로', krw.perMember.reduce((s, p) => s + p.owed, 0), 60000);
+}
+
 console.log(`\n== ${pass} passed, ${fail} failed ==`);
 process.exit(fail ? 1 : 0);

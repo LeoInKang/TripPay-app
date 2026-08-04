@@ -134,9 +134,20 @@ export function computeSettlement({
 
     const shares = parts.map((m) => shareOfKrw(exp, m, members, toKrw, isFx));
     const mode = (exp.split && exp.split.mode) || 'equal';
-    if (mode !== 'fixed') {
-      // 균등·비율: 반올림 잔여를 참여자에게 순환 배정해 합계를 지출액과 정확히 맞춘다.
-      // (고정액은 사용자가 정한 금액을 그대로 유지)
+
+    // 균등·비율: 반올림 잔여를 참여자에게 순환 배정해 합계를 지출액과 정확히 맞춘다.
+    // 고정액: 사용자가 정한 금액을 그대로 두는 게 원칙이지만, 외화는 건별로 환산하면서
+    //   생기는 반올림 오차(toKrw(a)+toKrw(b) ≠ toKrw(a+b))까지 떠안게 된다.
+    //   그래서 입력 합계가 지출액과 정확히 같을 때만 — 즉 사용자 의도가 "전액 분배"일 때만 —
+    //   환산 잔여를 보정한다. 합계가 애초에 안 맞는 데이터는 건드리지 않고 그대로 드러낸다.
+    let adjust = mode !== 'fixed';
+    if (!adjust && isFx) {
+      const vals = (exp.split && exp.split.values) || {};
+      const fixedSum = parts.reduce((s, m) => s + (Number(vals[m]) || 0), 0);
+      adjust = Math.round(fixedSum * 100) === Math.round((exp.amt || 0) * 100);
+    }
+
+    if (adjust) {
       const sum = shares.reduce((s, v) => s + v, 0);
       const diff = amtKrw - sum;
       if (diff !== 0) {

@@ -107,12 +107,22 @@ export async function shareTrip(data) {
       }
     }
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      await navigator.clipboard.writeText(url);
-      return { url, method: 'copy', ...meta };
+      try {
+        await navigator.clipboard.writeText(url);
+        return { url, method: 'copy', ...meta };
+      } catch (e) {
+        // 복사 권한이 없어도 업로드는 이미 끝났다. 링크를 직접 보여준다.
+      }
     }
     return { url, method: 'none', ...meta };
   }
 
-  await Share.share({ message: url });
-  return { url, method: 'share', ...meta };
+  // 공유 시트를 못 띄우더라도 binId는 반드시 반환한다.
+  // 여기서 throw하면 방금 만든 bin의 id를 잃어 회수할 수 없는 링크가 남는다.
+  try {
+    await Share.share({ message: url });
+    return { url, method: 'share', ...meta };
+  } catch (e) {
+    return { url, method: 'none', ...meta };
+  }
 }

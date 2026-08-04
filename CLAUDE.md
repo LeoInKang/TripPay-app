@@ -83,7 +83,8 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 - **잔액 계산이 HomeTab·SettleTab에 아직 중복**(계좌/카드/현금 3종). 한쪽만 고치면 화면 간 숫자가 어긋난다 — 고칠 땐 양쪽 동시에, 여력 되면 avgRate처럼 공용 모듈로 추출.
   - avgRate와 총 입금·총 지출 환산은 **2026-08-04에 `getAvgRate`로 통일 완료**(그 전까지 두 탭 숫자가 달랐다).
 - ⚠️ **공유 기능 ↔ 개인정보처리방침 불일치.** `share.js`는 여행 데이터(참석자 이름·지출·메모)를 외부 서버 JSONBin에 **공개 bin**(`X-Bin-Private: false`)으로 업로드하고 링크를 만든다. 반면 방침 §3·§5는 "모든 데이터는 기기에만 저장, 외부 서버로 전송하지 않음 / 제3자 없음"이라고 단언한다. 프로덕션 신청 전에 **방침 문구 보강**(사용자가 공유를 실행할 때만 JSONBin으로 전송·링크를 아는 사람은 열람 가능) 또는 기능 조정 중 하나가 필요하다. Play Data safety 답변도 같이 맞출 것.
-- `share.js`에 JSONBin **쓰기 전용 키가 하드코딩**되어 있고, 공유 뷰어는 옛 웹앱(`leoinkang.github.io/travel-expense-app/view.html`, 현재 살아 있음)이다. 공유 페이지는 아직 **개인별 순액 미반영**(총액 기준) — 후속 과제.
+- `share.js`에 JSONBin **쓰기 전용 키가 하드코딩**되어 있다. 공유 뷰어는 별도 리포 `LeoInKang/travel-expense-app`의 `view.html`(로컬 클론 `~/projects/apps/trippay`). 정산 로직은 `settle.js`를 그대로 이식해 뒀으니 **엔진을 고치면 뷰어도 같이 고쳐야 한다.**
+- **키 권한 실측 결과(2026-08-04)**: `DELETE`는 401 "does not have permission to delete the bin" — **삭제 불가**. `PUT` 덮어쓰기는 200. 그래서 `revokeShare()`의 실제 실행 경로는 항상 폴백(덮어쓰기)이다. 생성 시 `X-Bin-Versioning: false`를 보내며, 덮어쓴 뒤 버전 0·1·2 조회가 모두 404인 것도 확인했다(옛 내용 복구 불가).
 - `settle.js` 상단 주석에 "(회비 + 선결제)"가 남아 있으나 선결제는 스코프에서 제거됨(코드는 무관).
 - 루트에 45MB `.aab` 2개가 **untracked이고 .gitignore에도 없다** → `git add .` 하면 그대로 커밋된다.
 - 미디어 라이브러리에 옛 이름 스크린샷(1~5.jpg) 잔존. 스토어에는 새 버전만 적용됨, 정리는 선택.

@@ -76,6 +76,21 @@ export default function MainScreen({ route, navigation }) {
     navigation.navigate('Landing');
   };
 
+  // 여행 설정 저장. retro=false면 기존 '전원 균등' 지출을 이전 멤버로 고정(소급 방지).
+  const handleTripSave = (updated, retro = false) => {
+    const oldMembers = trip.members || [];
+    const newMembers = updated.members || oldMembers;
+    const added = newMembers.filter(m => !oldMembers.includes(m));
+    if (added.length > 0 && !retro) {
+      const freeze = (list) => list.map(e =>
+        (e.participants && e.participants.length) ? e : { ...e, participants: [...oldMembers] }
+      );
+      setExpenses(freeze(expenses));
+      setKrwExps(freeze(krwExps));
+    }
+    setTrip(updated);
+  };
+
   const sharedProps = {
     trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps,
     setDeposits, setCharges, setExchanges, setAtms, setRefunds,
@@ -116,7 +131,7 @@ export default function MainScreen({ route, navigation }) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, onSave: setTrip })}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, deposits, expenses, krwExps, onSave: handleTripSave })}>
             <Text style={styles.iconBtnText}>⚙ 설정</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('History')}>

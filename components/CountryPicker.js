@@ -1,0 +1,174 @@
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  Modal, Pressable, ScrollView, Platform
+} from 'react-native';
+import { COUNTRIES, POPULAR_CODES, REGIONS, searchCountries } from '../countries';
+
+// 검색 + 자주 가는 국가 + 지역별 그룹 바텀시트
+export default function CountryPicker({ value, onChange, label = '여행 국가' }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+
+  const results = searchCountries(q);
+  const searching = q.trim().length > 0;
+  const popular = POPULAR_CODES
+    .map(code => COUNTRIES.find(c => c.code === code))
+    .filter(Boolean);
+
+  const pick = (c) => { onChange(c); setOpen(false); setQ(''); };
+
+  return (
+    <View>
+      <Text style={styles.label}>{label}</Text>
+      <TouchableOpacity style={styles.trigger} activeOpacity={0.7} onPress={() => setOpen(true)}>
+        {value ? (
+          <Text style={styles.triggerText}>
+            {value.flag} {value.name} <Text style={styles.triggerSub}>{value.code} {value.sym}</Text>
+          </Text>
+        ) : (
+          <Text style={styles.triggerPlaceholder}>국가를 선택하세요</Text>
+        )}
+        <Text style={styles.chev}>▾</Text>
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <View style={styles.handle} />
+            <Text style={styles.sheetTitle}>여행 국가 선택</Text>
+
+            <View style={styles.searchBox}>
+              <Text style={styles.searchIcon}>🔍</Text>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="국가·통화 검색 (예: 일본, JPY)"
+                value={q}
+                onChangeText={setQ}
+                autoCorrect={false}
+              />
+              {q.length > 0 && (
+                <TouchableOpacity onPress={() => setQ('')} hitSlop={8}>
+                  <Text style={styles.clear}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+              {!searching && (
+                <>
+                  <Text style={styles.groupLabel}>자주 가는 국가</Text>
+                  <View style={styles.chips}>
+                    {popular.map(c => (
+                      <TouchableOpacity
+                        key={'p-' + c.code}
+                        style={[styles.chip, value?.code === c.code && styles.chipOn]}
+                        onPress={() => pick(c)}
+                      >
+                        <Text style={[styles.chipText, value?.code === c.code && styles.chipTextOn]}>
+                          {c.flag} {c.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </>
+              )}
+
+              {searching ? (
+                results.length === 0 ? (
+                  <Text style={styles.empty}>검색 결과가 없어요</Text>
+                ) : (
+                  results.map(c => (
+                    <Row key={'s-' + c.code + c.name} c={c} selected={value?.code === c.code} onPress={() => pick(c)} />
+                  ))
+                )
+              ) : (
+                REGIONS.map(region => {
+                  const list = COUNTRIES.filter(c => c.region === region);
+                  if (!list.length) return null;
+                  return (
+                    <View key={region}>
+                      <Text style={styles.groupLabel}>{region}</Text>
+                      {list.map(c => (
+                        <Row key={c.code + c.name} c={c} selected={value?.code === c.code} onPress={() => pick(c)} />
+                      ))}
+                    </View>
+                  );
+                })
+              )}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </View>
+  );
+}
+
+function Row({ c, selected, onPress }) {
+  return (
+    <TouchableOpacity style={[styles.row, selected && styles.rowOn]} onPress={onPress} activeOpacity={0.7}>
+      <Text style={styles.rowFlag}>{c.flag}</Text>
+      <Text style={[styles.rowName, selected && styles.rowNameOn]}>{c.name}</Text>
+      <Text style={styles.rowCode}>{c.code} {c.sym}</Text>
+      {selected && <Text style={styles.check}>✓</Text>}
+    </TouchableOpacity>
+  );
+}
+
+const styles = StyleSheet.create({
+  label: { fontSize: 13, fontWeight: '600', color: '#6b6b6b', marginBottom: 6 },
+  trigger: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff', borderRadius: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)',
+    paddingHorizontal: 12, paddingVertical: 13,
+  },
+  triggerText: { fontSize: 15, color: '#1a1a1a', fontWeight: '600' },
+  triggerSub: { fontSize: 13, color: '#9b9b9b', fontWeight: '400' },
+  triggerPlaceholder: { fontSize: 15, color: '#b0b0b0' },
+  chev: { fontSize: 12, color: '#9b9b9b' },
+
+  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' },
+  sheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    paddingTop: 8, paddingHorizontal: 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
+    maxHeight: '85%',
+  },
+  handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 12 },
+  sheetTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: 12 },
+
+  searchBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: Platform.OS === 'ios' ? 11 : 4,
+    marginBottom: 10,
+  },
+  searchIcon: { fontSize: 14 },
+  searchInput: { flex: 1, fontSize: 14, color: '#1a1a1a' },
+  clear: { fontSize: 14, color: '#9b9b9b', paddingHorizontal: 2 },
+
+  list: { maxHeight: 460 },
+  groupLabel: { fontSize: 11, color: '#9b9b9b', fontWeight: '600', marginTop: 10, marginBottom: 6 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+  chip: {
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', backgroundColor: '#fff',
+  },
+  chipOn: { backgroundColor: '#e6f1fb', borderColor: '#378ADD' },
+  chipText: { fontSize: 13, color: '#6b6b6b', fontWeight: '500' },
+  chipTextOn: { color: '#0c447c', fontWeight: '700' },
+
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 11, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  rowOn: { backgroundColor: '#f0f6ff' },
+  rowFlag: { fontSize: 18 },
+  rowName: { flex: 1, fontSize: 14, color: '#1a1a1a' },
+  rowNameOn: { color: '#0c447c', fontWeight: '700' },
+  rowCode: { fontSize: 12, color: '#9b9b9b' },
+  check: { fontSize: 14, color: '#378ADD', fontWeight: '700' },
+  empty: { fontSize: 13, color: '#9b9b9b', textAlign: 'center', paddingVertical: 30 },
+});

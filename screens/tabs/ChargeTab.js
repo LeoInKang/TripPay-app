@@ -110,7 +110,7 @@ export default function ChargeTab({
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>카드 충전</Text>
                   <Text style={styles.itemSub}>
-                    {c.date} · ₩{c.krw.toLocaleString('ko-KR')} → {sym}{c.local.toLocaleString('ko-KR')} · 환율 {c.rate}
+                    {c.date} · ₩{c.krw.toLocaleString('ko-KR')} → {sym}{c.local.toLocaleString('ko-KR')} · 환율 {r100 ? '100' : '1'}{sym}={c.rate}원
                   </Text>
                 </View>
                 <Text style={styles.itemAmt}>{sym}{c.local.toLocaleString('ko-KR')}</Text>
@@ -123,7 +123,7 @@ export default function ChargeTab({
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>현금 환전</Text>
                   <Text style={styles.itemSub}>
-                    {e.date} · ₩{e.krw.toLocaleString('ko-KR')} → {sym}{e.local.toLocaleString('ko-KR')} · 환율 {e.rate}
+                    {e.date} · ₩{e.krw.toLocaleString('ko-KR')} → {sym}{e.local.toLocaleString('ko-KR')} · 환율 {r100 ? '100' : '1'}{sym}={e.rate}원
                   </Text>
                 </View>
                 <Text style={styles.itemAmt}>{sym}{e.local.toLocaleString('ko-KR')}</Text>
@@ -162,6 +162,9 @@ export default function ChargeTab({
 }
 
 function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, onDone }) {
+  const rateHint = trip.country.exRate
+    ? `예: ${trip.country.exRate} (${r100 ? '100' : '1'}${sym} = ${trip.country.exRate}원)`
+    : '환율';
   const [krw, setKrw] = useState('');
   const [local, setLocal] = useState('');
   const [rate, setRate] = useState('');
@@ -222,8 +225,8 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, 
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>환율</Text>
-          <TextInput style={styles.input} placeholder={trip.country.exRate ? '예: ' + trip.country.exRate : '환율'} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+          <Text style={styles.label}>환율 ({trip.country.r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
+          <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -243,6 +246,9 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, 
 }
 
 function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, editItem, onDone }) {
+  const rateHint = trip.country.exRate
+    ? `예: ${trip.country.exRate} (${r100 ? '100' : '1'}${sym} = ${trip.country.exRate}원)`
+    : '환율';
   const [krw, setKrw] = useState('');
   const [local, setLocal] = useState('');
   const [rate, setRate] = useState('');
@@ -303,8 +309,8 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>환율</Text>
-          <TextInput style={styles.input} placeholder={trip.country.exRate ? '예: ' + trip.country.exRate : '환율'} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+          <Text style={styles.label}>환율 ({trip.country.r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
+          <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />

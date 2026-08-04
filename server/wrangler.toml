@@ -1,0 +1,14 @@
+name = "trippay"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# 공유 암호문 저장소. 아래 id는 `wrangler kv namespace create SHARES` 실행 후
+# 출력되는 값으로 바꿔야 한다.
+[[kv_namespaces]]
+binding = "SHARES"
+id = "PUT_KV_NAMESPACE_ID_HERE"
+
+# 도메인을 붙이면 링크가 20자 정도 짧아진다. 없으면 <name>.<account>.workers.dev 사용.
+# [[routes]]
+# pattern = "trippay.app/*"
+# custom_domain = true

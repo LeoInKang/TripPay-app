@@ -18,6 +18,8 @@ export async function saveTripData(tripId, data) {
       endDate: data?.trip?.endDate || '',
       members: data?.trip?.members || [],
       note: data?.trip?.note || '',
+      // 만료된 공유를 앱 시작 시 정리하려면 목록만 보고도 알 수 있어야 한다
+      share: data?.trip?.share || null,
       updatedAt: Date.now(),
     };
     const next = [meta, ...list.filter(t => t.id !== tripId)];

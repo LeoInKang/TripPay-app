@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
-import { shareTrip } from '../../share';
+import { shareTrip, revokeShare, SHARE_TTL_DAYS } from '../../share';
 import { computeSettlement, getAvgRate, makeToKrw } from '../../settle';
 import { PAY_CASH } from '../../constants';
 
@@ -12,7 +12,7 @@ function notify(msg) {
   }
 }
 
-export default function SettleTab({ trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
+export default function SettleTab({ trip, setTrip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
   const sym  = trip.country.sym;
   const r100 = trip.country.r100;
   const members = trip.members;
@@ -65,14 +65,24 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
   const { perMember } = computeSettlement({ members, deposits, expenses, krwExps, avgRate, r100 });
 
   const [sharing, setSharing] = useState(false);
+  const [revoking, setRevoking] = useState(false);
+  const share = trip.share;
+
+  const fmtDate = (ms) => {
+    const d = new Date(ms);
+    return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  };
+
   const handleShare = async () => {
     if (sharing) return;
     setSharing(true);
     try {
-      const { url, method } = await shareTrip({
+      const { url, method, binId, expiresAt } = await shareTrip({
         trip, deposits, expenses, krwExps,
         balance: { avgRate, acctBal, cardBal, cashBal },
       });
+      // 만료 정리·공유 취소에 쓰려면 링크를 어디에 만들었는지 남겨야 한다
+      if (setTrip) setTrip({ ...trip, share: { binId, expiresAt } });
       if (method === 'copy') notify('공유 링크를 복사했어요.\n' + url);
       else if (method === 'none') notify('공유 링크:\n' + url);
     } catch (e) {
@@ -82,12 +92,57 @@ export default function SettleTab({ trip, deposits, charges, exchanges, atms, re
     }
   };
 
+  const doRevoke = async () => {
+    setRevoking(true);
+    try {
+      const result = await revokeShare(share.binId);
+      if (result === 'FAILED') {
+        notify('취소하지 못했어요. 네트워크 연결을 확인하고 다시 시도해 주세요.');
+        return;
+      }
+      if (setTrip) setTrip({ ...trip, share: null });
+      notify('공유를 취소했어요. 기존 링크로는 더 이상 볼 수 없어요.');
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  const handleRevoke = () => {
+    if (revoking || !share?.binId) return;
+    const msg = '공유를 취소하면 이미 보낸 링크로도 내역을 볼 수 없어요. 취소할까요?';
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm(msg)) doRevoke();
+    } else {
+      Alert.alert('공유 취소', msg, [
+        { text: '그대로 두기', style: 'cancel' },
+        { text: '공유 취소', style: 'destructive', onPress: doRevoke },
+      ]);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* 공유 버튼 - 그라데이션 */}
       <TouchableOpacity style={styles.shareBtn} activeOpacity={0.85} onPress={handleShare} disabled={sharing}>
-        <Text style={styles.shareBtnText}>{sharing ? '공유 링크 만드는 중…' : '🔗 참석자에게 공유하기'}</Text>
+        <Text style={styles.shareBtnText}>
+          {sharing ? '공유 링크 만드는 중…' : share ? '🔗 새 링크로 다시 공유하기' : '🔗 참석자에게 공유하기'}
+        </Text>
       </TouchableOpacity>
+
+      {share ? (
+        <View style={styles.shareInfo}>
+          <Text style={styles.shareInfoText}>
+            공유 중 · {fmtDate(share.expiresAt)}까지 볼 수 있어요
+          </Text>
+          <TouchableOpacity onPress={handleRevoke} disabled={revoking} hitSlop={8}>
+            <Text style={styles.revokeBtn}>{revoking ? '취소 중…' : '공유 취소'}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <Text style={styles.shareHint}>
+          링크를 아는 사람은 누구나 볼 수 있어요. 공유 후 {SHARE_TTL_DAYS}일이 지나면 자동으로 정리돼요.
+        </Text>
+      )}
 
       {hasNegative && (
         <View style={styles.warnBanner}>
@@ -221,6 +276,14 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   shareBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+  shareInfo: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff', borderRadius: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)',
+    paddingHorizontal: 12, paddingVertical: 10, marginTop: -4, marginBottom: 12,
+  },
+  shareInfoText: { fontSize: 12, color: '#6b6b6b', flex: 1 },
+  revokeBtn: { fontSize: 12, color: '#c0413f', fontWeight: '700', marginLeft: 8 },
+  shareHint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: -4, marginBottom: 12, paddingHorizontal: 2 },
 
   card: {
     backgroundColor: '#fff',

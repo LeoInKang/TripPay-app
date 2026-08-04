@@ -92,7 +92,8 @@ export default function MainScreen({ route, navigation }) {
   };
 
   const sharedProps = {
-    trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps,
+    trip, setTrip,
+    deposits, charges, exchanges, atms, refunds, expenses, krwExps,
     setDeposits, setCharges, setExchanges, setAtms, setRefunds,
     setExpenses, setKrwExps,
   };

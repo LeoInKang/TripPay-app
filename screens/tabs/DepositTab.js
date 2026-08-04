@@ -6,6 +6,7 @@ import {
 import BottomSheet from '../../components/BottomSheet';
 import Segment     from '../../components/Segment';
 import DateField   from '../../components/DateField';
+import { getAvgRate, makeToKrw } from '../../settle';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -22,11 +23,10 @@ function fmtInt(v) {
   return parseInt(digits, 10).toLocaleString('ko-KR');
 }
 
-export default function DepositTab({ trip, deposits, setDeposits }) {
+export default function DepositTab({ trip, deposits, setDeposits, charges = [], exchanges = [] }) {
   const [member,   setMember]   = useState(trip.members[0]);
   const [currency, setCurrency] = useState('KRW');
   const [amount,   setAmount]   = useState('');
-  const [rate,     setRate]     = useState('');
   const [krwEquiv, setKrwEquiv] = useState('');
   const [date,     setDate]     = useState('');
   const [note,     setNote]     = useState('');
@@ -34,6 +34,10 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
 
   const sym  = trip.country.sym;
   const r100 = trip.country.r100;
+
+  // 여행 평균환율 (settle.js 단일 출처). 외화 회비는 이 환율로 자동 환산.
+  const avgRate = getAvgRate(trip, charges, exchanges);
+  const toKrwLocal = makeToKrw(avgRate, r100);
 
   const memberOptions = trip.members.map(m => ({ value: m, label: m }));
   const currencyOptions = [
@@ -44,42 +48,35 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
   const handleAmtChange = (v) => {
     setAmount(fmtInt(v));
     const n = parseInt(v.replace(/,/g, '')) || 0;
-    if (currency === 'LOCAL' && rate && n) {
-      const k = r100 ? n * parseFloat(rate) / 100 : n * parseFloat(rate);
-      setKrwEquiv(Math.round(k).toLocaleString('ko-KR'));
-    }
+    setKrwEquiv(currency === 'LOCAL' && n ? toKrwLocal(n).toLocaleString('ko-KR') : '');
   };
-  const handleRateChange = (v) => {
-    setRate(v);
-    const a = parseInt(amount.replace(/,/g, '')) || 0;
-    if (a && v) {
-      const k = r100 ? a * parseFloat(v) / 100 : a * parseFloat(v);
-      setKrwEquiv(Math.round(k).toLocaleString('ko-KR'));
-    }
+  const handleCurrencyChange = (c) => {
+    setCurrency(c);
+    const n = parseInt((amount || '').replace(/,/g, '')) || 0;
+    setKrwEquiv(c === 'LOCAL' && n ? toKrwLocal(n).toLocaleString('ko-KR') : '');
   };
 
   const resetForm = () => {
     setEditId(null);
     setMember(trip.members[0]);
     setCurrency('KRW');
-    setAmount(''); setRate(''); setKrwEquiv(''); setDate(''); setNote('');
+    setAmount(''); setKrwEquiv(''); setDate(''); setNote('');
   };
 
   const handleSubmit = () => {
     if (!member) return notify('참석자를 선택해 주세요.');
     if (!amount) return notify('회비 금액을 입력해 주세요.');
-    if (currency === 'LOCAL') {
-      if (!rate)     return notify('환율을 입력해 주세요.');
-      if (!krwEquiv) return notify('원화환산이 계산되지 않았어요. 금액과 환율을 확인해 주세요.');
+    if (currency === 'LOCAL' && avgRate <= 0) {
+      return notify('평균환율이 아직 없어요. 충전/환전을 먼저 입력하거나 원화로 납부해 주세요.');
     }
     if (!date) return notify('날짜를 선택해 주세요.');
     const a = parseInt(amount.replace(/,/g, '')) || 0;
-    const k = currency === 'KRW' ? a : (parseInt((krwEquiv || '').replace(/,/g, '')) || 0);
+    const k = currency === 'KRW' ? a : toKrwLocal(a);
     const payload = {
       mem: member,
       cur: currency,
       amt: a,
-      rate: currency === 'LOCAL' ? parseFloat(rate) : null,
+      rate: currency === 'LOCAL' ? Number(avgRate.toFixed(2)) : null,
       krwEquiv: k,
       date,
       note,
@@ -97,12 +94,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
     setMember(d.mem);
     setCurrency(d.cur);
     setAmount(d.amt != null ? fmtInt(String(d.amt)) : '');
-    if (d.cur === 'LOCAL') {
-      setRate(d.rate != null ? String(d.rate) : '');
-      setKrwEquiv(d.krwEquiv != null ? Number(d.krwEquiv).toLocaleString('ko-KR') : '');
-    } else {
-      setRate(''); setKrwEquiv('');
-    }
+    setKrwEquiv(d.cur === 'LOCAL' ? toKrwLocal(d.amt || 0).toLocaleString('ko-KR') : '');
     setDate(d.date || '');
     setNote(d.note || '');
   };
@@ -167,7 +159,7 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
               label="통화"
               value={currency}
               options={currencyOptions}
-              onChange={setCurrency}
+              onChange={handleCurrencyChange}
             />
           </View>
           <View style={styles.col}>
@@ -182,30 +174,6 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
           </View>
         </View>
 
-        {/* 외화 시: 환율 + 원화환산 */}
-        {currency === 'LOCAL' && (
-          <View style={styles.formRow}>
-            <View style={styles.col}>
-              <Text style={styles.label}>환율</Text>
-              <TextInput
-                style={styles.input}
-                placeholder={trip.country.exRate ? '예: ' + trip.country.exRate : '환율'}
-                keyboardType="decimal-pad"
-                value={rate}
-                onChangeText={handleRateChange}
-              />
-            </View>
-            <View style={styles.col}>
-              <Text style={styles.label}>원화환산(자동)</Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: '#f5f5f0' }]}
-                placeholder="자동"
-                value={krwEquiv}
-                editable={false}
-              />
-            </View>
-          </View>
-        )}
 
         {/* 2줄: 날짜(캘린더) | 메모 */}
         <View style={styles.formRow}>
@@ -282,12 +250,12 @@ export default function DepositTab({ trip, deposits, setDeposits }) {
                         </View>
                       </View>
                       <Text style={styles.depSub}>
-                        {d.date} · 환율 {d.rate}
+                        {d.date} · 환율 {r100 ? '100' : '1'}{sym}={avgRate.toFixed(2)}원
                       </Text>
                     </View>
                     <View style={styles.depAmtBox}>
                       <Text style={styles.depAmt}>{sym}{d.amt.toLocaleString('ko-KR')}</Text>
-                      <Text style={styles.depAmtKrw}>≈₩{(d.krwEquiv || 0).toLocaleString('ko-KR')}</Text>
+                      <Text style={styles.depAmtKrw}>≈₩{toKrwLocal(d.amt || 0).toLocaleString('ko-KR')}</Text>
                     </View>
                     {renderRowActions('d-' + d.id, d)}
                   </View>

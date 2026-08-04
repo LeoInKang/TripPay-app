@@ -40,3 +40,7 @@ yarn-error.*
 /ios
 /android
 *.bak
+
+# EAS build artifacts (45MB each)
+*.aab
+*.apk

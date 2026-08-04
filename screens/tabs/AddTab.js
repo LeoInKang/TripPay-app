@@ -4,8 +4,9 @@ import {
   StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import Segment     from '../../components/Segment';
-import BottomSheet from '../../components/BottomSheet';
 import DateField   from '../../components/DateField';
+import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
+import { PAY_METHODS } from '../../constants';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -24,7 +25,6 @@ function fmtInt(v) {
 
 export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const sym = trip.country.sym;
-  const payMethods = trip.payMethods || ['트레블월렛', '현금'];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -33,7 +33,7 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
         expenses={expenses}
         setExpenses={setExpenses}
         sym={sym}
-        payMethods={payMethods}
+        payMethods={PAY_METHODS}
       />
       <KrwExpenseForm
         trip={trip}
@@ -49,34 +49,39 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
   const [amt,   setAmt]   = useState('');
   const [pay,   setPay]   = useState(payMethods[0]);
   const [date,  setDate]  = useState('');
-  const [payer, setPayer] = useState('공통');
   const [note,  setNote]  = useState('');
+  const [splitVal, setSplitVal] = useState(null);
 
   const payOptions = payMethods.map(m => ({ value: m, label: m }));
-  const payerOptions = ['공통', ...trip.members].map(m => ({ value: m, label: m }));
 
   const handleAdd = () => {
     if (!name) return notify('항목명을 입력해 주세요.');
     if (!amt)  return notify('금액을 입력해 주세요.');
     if (!date) return notify('날짜를 선택해 주세요.');
+    const amtNum = parseFloat(amt.replace(/,/g, ''));
+    const splitErr = splitErrorMessage(splitVal, amtNum, sym);
+    if (splitErr) return notify(splitErr);
     setExpenses([...expenses, {
       id: Date.now(),
       name,
-      amt: parseFloat(amt.replace(/,/g, '')),
+      amt: amtNum,
       pay,
       date,
-      payer,
       note,
+      ...(splitVal || {}),
     }]);
-    setName(''); setAmt(''); setNote('');
+    setName(''); setAmt(''); setNote(''); setSplitVal(null);
   };
 
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>💱 외화 지출</Text>
 
-      {/* 1줄: 항목명 (단독) */}
+      {/* 1줄: 날짜 | 항목명 */}
       <View style={styles.formRow}>
+        <View style={[styles.col, { flex: 0.48 }]}>
+          <DateField label="날짜" value={date} onChange={setDate} />
+        </View>
         <View style={styles.col}>
           <Text style={styles.label}>항목명</Text>
           <TextInput
@@ -110,23 +115,7 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
         </View>
       </View>
 
-      {/* 3줄: 날짜 | 결제자(BottomSheet) */}
-      <View style={styles.formRow}>
-        <View style={styles.col}>
-          <DateField label="날짜" value={date} onChange={setDate} />
-        </View>
-        <View style={styles.col}>
-          <BottomSheet
-            label="결제자"
-            value={payer}
-            options={payerOptions}
-            onChange={setPayer}
-            title="결제자 선택"
-          />
-        </View>
-      </View>
-
-      {/* 4줄: 메모 */}
+      {/* 3줄: 메모 */}
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>메모</Text>
@@ -139,6 +128,8 @@ function FxExpenseForm({ trip, expenses, setExpenses, sym, payMethods }) {
         </View>
       </View>
 
+      <SplitEditor members={trip.members} value={splitVal} onChange={setSplitVal} sym={sym} amount={parseFloat((amt || '').replace(/,/g, '')) || 0} />
+
       <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 외화지출</Text>
       </TouchableOpacity>
@@ -150,31 +141,36 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
   const [name,  setName]  = useState('');
   const [amt,   setAmt]   = useState('');
   const [date,  setDate]  = useState('');
-  const [payer, setPayer] = useState('공통');
   const [note,  setNote]  = useState('');
-
-  const payerOptions = ['공통', ...trip.members].map(m => ({ value: m, label: m }));
+  const [splitVal, setSplitVal] = useState(null);
 
   const handleAdd = () => {
     if (!name) return notify('항목명을 입력해 주세요.');
     if (!amt)  return notify('금액을 입력해 주세요.');
     if (!date) return notify('날짜를 선택해 주세요.');
+    const amtNum = parseInt(amt.replace(/,/g, ''));
+    const splitErr = splitErrorMessage(splitVal, amtNum, '₩');
+    if (splitErr) return notify(splitErr);
     setKrwExps([...krwExps, {
       id: Date.now(),
       name,
-      amt: parseInt(amt.replace(/,/g, '')),
+      amt: amtNum,
       date,
-      payer,
       note,
+      ...(splitVal || {}),
     }]);
-    setName(''); setAmt(''); setNote('');
+    setName(''); setAmt(''); setNote(''); setSplitVal(null);
   };
 
   return (
     <View style={styles.card}>
       <Text style={styles.cardTitle}>💴 원화 지출</Text>
 
+      {/* 1줄: 날짜 | 항목명 */}
       <View style={styles.formRow}>
+        <View style={[styles.col, { flex: 0.48 }]}>
+          <DateField label="날짜" value={date} onChange={setDate} />
+        </View>
         <View style={styles.col}>
           <Text style={styles.label}>항목명</Text>
           <TextInput
@@ -184,6 +180,10 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
             onChangeText={setName}
           />
         </View>
+      </View>
+
+      {/* 2줄: 금액 | 메모 */}
+      <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>금액(원화)</Text>
           <TextInput
@@ -194,29 +194,13 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
             onChangeText={v => setAmt(fmtInt(v))}
           />
         </View>
-      </View>
-
-      <View style={styles.formRow}>
-        <View style={styles.col}>
-          <DateField label="날짜" value={date} onChange={setDate} />
-        </View>
-        <View style={styles.col}>
-          <BottomSheet
-            label="결제자"
-            value={payer}
-            options={payerOptions}
-            onChange={setPayer}
-            title="결제자 선택"
-          />
-        </View>
-      </View>
-
-      <View style={styles.formRow}>
-        <View style={styles.col}>
+        <View style={[styles.col, { flex: 1.3 }]}>
           <Text style={styles.label}>메모</Text>
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
+
+      <SplitEditor members={trip.members} value={splitVal} onChange={setSplitVal} sym="₩" amount={parseInt((amt || '').replace(/,/g, '')) || 0} />
 
       <TouchableOpacity style={styles.addBtn} onPress={handleAdd} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>+ 원화지출</Text>

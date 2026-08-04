@@ -1,18 +1,19 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { getAvgRate, makeToKrw } from '../../settle';
+import { PAY_CASH } from '../../constants';
 
 export default function HomeTab({ trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
   const sym = trip.country.sym;
   const r100 = trip.country.r100;
 
-  // 평균 환율
-  const allFx = [...charges, ...exchanges];
-  const avgRate = allFx.length > 0 ? allFx.reduce((s,i) => s+i.rate, 0) / allFx.length : 0;
-  const toKrw = v => avgRate > 0 ? Math.round(v * avgRate / (r100 ? 100 : 1)) : 0;
+  // 평균 환율 (settle.js 단일 출처)
+  const avgRate = getAvgRate(trip, charges, exchanges);
+  const toKrw = makeToKrw(avgRate, r100);
 
   // 카드 잔액 = 충전 - 카드결제 - ATM인출 - 카드잔액이전 (SettleTab과 동일)
   const cardCharged = charges.reduce((s,c) => s+c.local, 0);
-  const cardSpent   = expenses.filter(e => e.pay !== '현금').reduce((s,e) => s+e.amt, 0);
+  const cardSpent   = expenses.filter(e => e.pay !== PAY_CASH).reduce((s,e) => s+e.amt, 0);
   const cardRefund  = (refunds||[]).reduce((s,r) => s+(r.local||0), 0);
   const cardAtm     = (atms||[]).reduce((s,a) => s+(a.local||0), 0);
   const cardBal     = cardCharged - cardSpent - cardRefund - cardAtm;
@@ -20,12 +21,14 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   // 현금 잔액 = 환전합계 + ATM합계 + LOCAL 회비납부 - 현금결제합계
   const localDeposits = deposits.filter(d => d.cur === 'LOCAL').reduce((s,d) => s+(d.amt||0), 0);
   const cashIn    = exchanges.reduce((s,e) => s+e.local, 0) + (atms||[]).reduce((s,a) => s+a.local, 0) + localDeposits;
-  const cashSpent = expenses.filter(e => e.pay === '현금').reduce((s,e) => s+e.amt, 0);
+  const cashSpent = expenses.filter(e => e.pay === PAY_CASH).reduce((s,e) => s+e.amt, 0);
   const cashBal   = cashIn - cashSpent;
 
   // 계좌 잔액 = 원화입금만 - 충전krw - 환전krw - 원화지출 + 환급krw
   const totalKrwDeposit = deposits.filter(d => d.cur !== 'LOCAL').reduce((s,d) => s+(d.krwEquiv||d.amt||0), 0);
-  const totalDepKrw     = deposits.reduce((s,d) => s+(d.krwEquiv||0), 0);  // 총입금(표시용)
+  // 총입금: 외화 회비는 저장값이 아니라 현재 평균환율로 환산 (정산 탭과 기준 일치)
+  const totalDepKrw     = deposits.reduce((s,d) =>
+    s + (d.cur === 'LOCAL' ? toKrw(d.amt||0) : (d.krwEquiv||d.amt||0)), 0);
   const totalCharged   = charges.reduce((s,c) => s+c.krw, 0);
   const totalExchanged = exchanges.reduce((s,e) => s+e.krw, 0);
   const totalKrwExp    = krwExps.reduce((s,e) => s+e.amt, 0);
@@ -34,7 +37,8 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
 
   // 총 지출
   const totalFxAmt = expenses.reduce((s,e) => s+e.amt, 0);
-  const totalFxKrw = toKrw(totalFxAmt);
+  // 건별 환산 후 합 (참석자 부담 합계·정산 탭과 동일 기준)
+  const totalFxKrw = expenses.reduce((s,e) => s+toKrw(e.amt), 0);
 
   // 잔액 음수 경고
   const hasNegative = acctBal < 0 || cardBal < 0 || cashBal < 0;
@@ -65,6 +69,22 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
         </View>
       )}
 
+      {/* 총 입금/지출 */}
+      <View style={styles.sumRow}>
+        <View style={[styles.sumCard, { flex: 1 }]}>
+          <Text style={styles.balLabel}>총 입금</Text>
+          <Text style={styles.sumValue}>₩{totalDepKrw.toLocaleString('ko-KR')}</Text>
+          <Text style={styles.balSub}>{deposits.length}건</Text>
+        </View>
+        <View style={[styles.sumCard, { flex: 1 }]}>
+          <Text style={styles.balLabel}>총 지출</Text>
+          <Text style={styles.sumValue}>
+            {sym}{totalFxAmt.toLocaleString('ko-KR')}{totalKrwExp>0?` +₩${totalKrwExp.toLocaleString('ko-KR')}`:''}
+          </Text>
+          <Text style={styles.balSub}>₩{(totalFxKrw+totalKrwExp).toLocaleString('ko-KR')} 상당</Text>
+        </View>
+      </View>
+
       {/* 잔액 카드 3개 */}
       <View style={styles.balRow}>
         <View style={styles.balCard}>
@@ -83,22 +103,6 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
             {sym}{cashBal.toLocaleString('ko-KR')}
           </Text>
           <Text style={styles.balSub}>환전{exchanges.length}·ATM{(atms||[]).length}</Text>
-        </View>
-      </View>
-
-      {/* 총 지출/입금 */}
-      <View style={styles.sumRow}>
-        <View style={[styles.sumCard, { flex: 1.2 }]}>
-          <Text style={styles.balLabel}>총 지출</Text>
-          <Text style={styles.sumValue}>
-            {sym}{totalFxAmt.toLocaleString('ko-KR')}{totalKrwExp>0?` +₩${totalKrwExp.toLocaleString('ko-KR')}`:''}
-          </Text>
-          <Text style={styles.balSub}>₩{(totalFxKrw+totalKrwExp).toLocaleString('ko-KR')} 상당</Text>
-        </View>
-        <View style={[styles.sumCard, { flex: 1 }]}>
-          <Text style={styles.balLabel}>총 입금</Text>
-          <Text style={styles.sumValue}>₩{totalDepKrw.toLocaleString('ko-KR')}</Text>
-          <Text style={styles.balSub}>{deposits.length}건</Text>
         </View>
       </View>
 
@@ -132,7 +136,7 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
                       {_itemAmt(item, sym)}
                     </Text>
                     {item.type==='deposit' && item.cur==='LOCAL' && (
-                      <Text style={styles.rowAmtKrw}>≈₩{(item.krwEquiv||0).toLocaleString('ko-KR')}</Text>
+                      <Text style={styles.rowAmtKrw}>≈₩{toKrw(item.amt||0).toLocaleString('ko-KR')}</Text>
                     )}
                   </View>
                 </View>
@@ -161,7 +165,7 @@ function _itemSub(item, sym) {
   if(item.type==='charge')   return `₩${item.krw?.toLocaleString('ko-KR')} → ${sym}${item.local?.toLocaleString('ko-KR')} · 환율 ${item.rate}`;
   if(item.type==='exchange') return `₩${item.krw?.toLocaleString('ko-KR')} → ${sym}${item.local?.toLocaleString('ko-KR')} · 환율 ${item.rate}`;
   if(item.type==='deposit')  return item.cur==='LOCAL' ? '외화 회비납부' : '원화 회비납부';
-  if(item.type==='krwexp')   return `${item.payer} · 계좌 직접 차감`;
+  if(item.type==='krwexp')   return item.note ? `계좌 직접 차감 · ${item.note}` : '계좌 직접 차감';
   return item.pay || '';
 }
 function _itemAmt(item, sym) {

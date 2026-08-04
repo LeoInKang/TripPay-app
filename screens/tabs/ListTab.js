@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
 import DateField   from '../../components/DateField';
+import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
+import { PAY_METHODS } from '../../constants';
 
 // 정수 금액용 천단위 콤마 포맷
 function fmtInt(v) {
@@ -17,8 +19,6 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
   const [filterDate, setFilterDate] = useState('all');
   const [filterPay, setFilterPay]   = useState('all');
   const sym = trip.country.sym;
-  const payMethods = trip.payMethods || ['트레블월렛', '현금'];
-  const payerList = ['공통', ...trip.members];
 
   const allItems = [
     ...expenses.map(e => ({ ...e, type: 'fx' })),
@@ -62,11 +62,11 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
   const handleSaveEdit = (draft) => {
     if (draft.type === 'fx') {
       setExpenses(expenses.map(e => e.id === draft.id
-        ? { ...e, name: draft.name, amt: draft.amt, pay: draft.pay, date: draft.date, payer: draft.payer, note: draft.note }
+        ? { ...e, name: draft.name, amt: draft.amt, pay: draft.pay, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split }
         : e));
     } else {
       setKrwExps(krwExps.map(e => e.id === draft.id
-        ? { ...e, name: draft.name, amt: draft.amt, date: draft.date, payer: draft.payer, note: draft.note }
+        ? { ...e, name: draft.name, amt: draft.amt, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split }
         : e));
     }
     setEditItem(null);
@@ -135,11 +135,6 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
                       <Text style={styles.badgeKrwText}>원화</Text>
                     </View>
                   )}
-                  {item.payer && item.payer !== '공통' && (
-                    <View style={styles.badgePayer}>
-                      <Text style={styles.badgePayerText}>{item.payer}</Text>
-                    </View>
-                  )}
                 </View>
                 <Text style={styles.sub}>
                   {item.date}{item.pay ? ' · ' + item.pay : ''}
@@ -160,8 +155,8 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
       <EditExpenseModal
         item={editItem}
         sym={sym}
-        payMethods={payMethods}
-        payerList={payerList}
+        payMethods={PAY_METHODS}
+        members={trip.members}
         onClose={() => setEditItem(null)}
         onSave={handleSaveEdit}
       />
@@ -169,13 +164,13 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
   );
 }
 
-function EditExpenseModal({ item, sym, payMethods, payerList, onClose, onSave }) {
+function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   const [name, setName]   = useState('');
   const [amt, setAmt]     = useState('');
   const [pay, setPay]     = useState('');
   const [date, setDate]   = useState('');
-  const [payer, setPayer] = useState('공통');
   const [note, setNote]   = useState('');
+  const [splitVal, setSplitVal] = useState(null);
 
   useEffect(() => {
     if (item) {
@@ -183,8 +178,12 @@ function EditExpenseModal({ item, sym, payMethods, payerList, onClose, onSave })
       setAmt(item.amt != null ? fmtInt(String(item.amt)) : '');
       setPay(item.pay || (payMethods[0] || ''));
       setDate(item.date || '');
-      setPayer(item.payer || '공통');
       setNote(item.note || '');
+      setSplitVal(
+        (item.participants || item.split)
+          ? { participants: item.participants || members, split: item.split || { mode: 'equal', values: {} } }
+          : null
+      );
     }
   }, [item]);
 
@@ -198,6 +197,8 @@ function EditExpenseModal({ item, sym, payMethods, payerList, onClose, onSave })
     const num = isFx
       ? parseFloat(amt.replace(/,/g, ''))
       : parseInt(amt.replace(/,/g, ''));
+    const splitErr = splitErrorMessage(splitVal, num, isFx ? sym : '₩');
+    if (splitErr) { notifyLocal(splitErr); return; }
     onSave({
       id: item.id,
       type: item.type,
@@ -205,8 +206,9 @@ function EditExpenseModal({ item, sym, payMethods, payerList, onClose, onSave })
       amt: num,
       pay: isFx ? pay : undefined,
       date,
-      payer,
       note,
+      participants: splitVal ? splitVal.participants : undefined,
+      split: splitVal ? splitVal.split : undefined,
     });
   };
 
@@ -237,21 +239,16 @@ function EditExpenseModal({ item, sym, payMethods, payerList, onClose, onSave })
               </>
             )}
 
-            <Text style={styles.label}>결제자</Text>
-            <View style={styles.chipRow}>
-              {payerList.map(p => (
-                <TouchableOpacity key={p} style={[styles.chip, payer === p && styles.chipSel]} onPress={() => setPayer(p)}>
-                  <Text style={[styles.chipText, payer === p && styles.chipTextSel]}>{p}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <View style={{ marginTop: 4 }}>
+            <View style={{ marginTop: 10 }}>
               <DateField label="날짜" value={date} onChange={setDate} />
             </View>
 
             <Text style={styles.label}>메모</Text>
             <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+
+            <View style={{ marginTop: 10 }}>
+              <SplitEditor members={members} value={splitVal} onChange={setSplitVal} sym={isFx ? sym : '₩'} amount={parseFloat((amt || '').replace(/,/g, '')) || 0} />
+            </View>
           </ScrollView>
 
           <View style={styles.btnRow}>

@@ -38,7 +38,7 @@ share.js             정산 공유 — AES-256-GCM 암호화 → 워커 업로�
 countries.js         국가·통화 47개 (COUNTRIES·POPULAR_CODES·searchCountries)
 sampleData.js        개발용 샘플 (__DEV__에서만 Landing에 버튼 노출)
 server/              Cloudflare Worker (공유 서버) + wrangler.toml + README
-docs/                feedback-backlog.md · privacy-policy.html · play-data-safety.md
+docs/                feedback-backlog.md · privacy-policy.html · play-data-safety.md · receipt-import-prompt.md
 play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ```
 

@@ -93,7 +93,6 @@ export default function MainScreen({ route, navigation }) {
 
   const sharedProps = {
     trip, setTrip,
-    openHelp: () => navigation.navigate('Help'),
     deposits, charges, exchanges, atms, refunds, expenses, krwExps,
     setDeposits, setCharges, setExchanges, setAtms, setRefunds,
     setExpenses, setKrwExps,
@@ -133,6 +132,9 @@ export default function MainScreen({ route, navigation }) {
           </Text>
         </View>
         <View style={styles.topBarRight}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Help')}>
+            <Text style={styles.iconBtnText}>❓ 도움말</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, deposits, expenses, krwExps, onSave: handleTripSave })}>
             <Text style={styles.iconBtnText}>⚙ 설정</Text>
           </TouchableOpacity>

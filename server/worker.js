@@ -25,16 +25,27 @@ async function hashToken(token) {
   return b64url(new Uint8Array(digest));
 }
 
+// 앱의 웹 빌드(다른 오리진)에서도 공유·취소가 되도록 CORS를 연다.
+// 열어도 안전한 이유: 서버가 다루는 건 어차피 암호문뿐이고, 삭제는 토큰이 지킨다.
+const CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, X-Delete-Token',
+  'Access-Control-Max-Age': '86400',
+};
+
 const json = (obj, status = 200) =>
   new Response(JSON.stringify(obj), {
     status,
-    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', ...CORS },
   });
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const [, section, id] = url.pathname.split('/');
+
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
     if (section === 'd') {
       if (request.method === 'POST' && !id) return create(request, env);
@@ -75,6 +86,7 @@ async function read(id, env) {
       'Content-Type': 'text/plain; charset=utf-8',
       // 링크가 살아 있는 동안만 짧게 캐시. 취소가 곧바로 반영되도록.
       'Cache-Control': 'public, max-age=60',
+      ...CORS,
     },
   });
 }

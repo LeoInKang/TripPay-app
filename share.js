@@ -1,6 +1,6 @@
 import { Platform, Share } from 'react-native';
-import { gcm } from '@noble/ciphers/aes';
-import { utf8ToBytes } from '@noble/ciphers/utils';
+import { gcm } from '@noble/ciphers/aes.js';
+import { utf8ToBytes } from '@noble/ciphers/utils.js';
 import * as Crypto from 'expo-crypto';
 
 // 공유 서버 (Cloudflare Worker). 암호문만 보관하며 복호화 키는 받지 않는다.

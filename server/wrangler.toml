@@ -6,7 +6,7 @@ compatibility_date = "2026-08-01"
 # 출력되는 값으로 바꿔야 한다.
 [[kv_namespaces]]
 binding = "SHARES"
-id = "PUT_KV_NAMESPACE_ID_HERE"
+id = "e895d830dacc4c728ed776973adfe516"
 
 # 도메인을 붙이면 링크가 20자 정도 짧아진다. 없으면 <name>.<account>.workers.dev 사용.
 # [[routes]]

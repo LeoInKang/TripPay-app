@@ -7,8 +7,7 @@ import SetupScreen   from './screens/SetupScreen';
 import MainScreen    from './screens/MainScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import SettingsScreen from './screens/SettingsScreen';
-import { getCurrentTripId, loadTripData, listTrips, saveTripData } from './storage';
-import { revokeShare } from './share';
+import { getCurrentTripId, loadTripData } from './storage';
 import { importTripFile } from './transfer';
 import {
   SAMPLE_TRIP, SAMPLE_DEPOSITS, SAMPLE_CHARGES,
@@ -96,23 +95,6 @@ function LandingScreen({ navigation }) {
 export default function App() {
   const [booting, setBooting] = useState(true);
   const [resume,  setResume]  = useState(null);
-
-  // 기한이 지난 공유 링크 정리. 서버가 없어 앱이 실행될 때만 돌아간다.
-  useEffect(() => {
-    (async () => {
-      try {
-        const now = Date.now();
-        const expired = (await listTrips())
-          .filter(t => t.share?.binId && t.share.expiresAt && t.share.expiresAt < now);
-        for (const meta of expired) {
-          const result = await revokeShare(meta.share.binId);
-          if (result === 'FAILED') continue; // 다음 실행 때 다시 시도
-          const data = await loadTripData(meta.id);
-          if (data?.trip) await saveTripData(meta.id, { ...data, trip: { ...data.trip, share: null } });
-        }
-      } catch (e) {}
-    })();
-  }, []);
 
   // 앱 시작 시 마지막 여행 자동 복원
   useEffect(() => {

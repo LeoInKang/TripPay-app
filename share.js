@@ -1,14 +1,33 @@
 import { Platform, Share } from 'react-native';
+import { gcm } from '@noble/ciphers/aes';
+import { utf8ToBytes } from '@noble/ciphers/utils';
+import * as Crypto from 'expo-crypto';
 
-// index.html과 동일한 쓰기 전용 Access 키 (이미 공개된 값)
-const JBIN_ACCESS = '$2a$10$xvOaqF.H5hKFjNwfi.ZvJ.vosXlodN0WHvCVbqAeHWc5yzp/VrGBi';
-const VIEW_BASE   = 'https://leoinkang.github.io/travel-expense-app/view.html';
-const JBIN_BASE   = 'https://api.jsonbin.io/v3/b';
+// 공유 서버 (Cloudflare Worker). 암호문만 보관하며 복호화 키는 받지 않는다.
+// 자세한 구조는 server/README.md 참고.
+const WORKER = 'https://trippay.fompy98.workers.dev';
 
-// 공유 링크 유효기간. 지나면 앱이 실행될 때 정리한다.
+// 링크 유효기간. 실제 만료는 서버(KV TTL)가 처리하므로 앱 실행과 무관하다.
 export const SHARE_TTL_DAYS = 7;
 
-// view.html이 기대하는 형태로 페이로드 구성
+const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+// RN에는 btoa가 보장되지 않아 직접 인코딩한다.
+function toB64url(bytes) {
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 3) {
+    const a = bytes[i], b = bytes[i + 1], c = bytes[i + 2];
+    out += B64[a >> 2];
+    out += B64[((a & 3) << 4) | ((b || 0) >> 4)];
+    if (b === undefined) break;
+    out += B64[((b & 15) << 2) | ((c || 0) >> 6)];
+    if (c === undefined) break;
+    out += B64[c & 63];
+  }
+  return out;
+}
+
+// 여행 데이터 -> 공유 페이로드 (뷰어가 그대로 렌더링한다)
 export function buildSharePayload({ trip, deposits, expenses, krwExps, balance }) {
   return {
     tripName: trip?.name || '',
@@ -32,70 +51,54 @@ export function buildSharePayload({ trip, deposits, expenses, krwExps, balance }
     expenses: expenses || [],
     krwExps:  krwExps  || [],
     createdAt: Date.now(),
-    expiresAt: Date.now() + SHARE_TTL_DAYS * 86400000,
   };
 }
 
-// JSONBin에 공개 bin 생성 -> { url, binId } 반환
-// 버전 기록을 끄는 이유: 켜져 있으면 만료 처리로 덮어써도 이전 버전이 그대로 조회된다.
+// 암호화해서 업로드하고 링크를 만든다.
+// 키는 '#' 뒤에 실린다. 프래그먼트는 HTTP 요청에 포함되지 않으므로 서버에 도달하지 않는다.
 export async function createShareLink(payload) {
-  const res = await fetch(JBIN_BASE, {
+  const key = Crypto.getRandomBytes(32);   // AES-256
+  const iv  = Crypto.getRandomBytes(12);
+  const sealed = gcm(key, iv).encrypt(utf8ToBytes(JSON.stringify(payload)));
+
+  const body = new Uint8Array(iv.length + sealed.length);
+  body.set(iv);
+  body.set(sealed, iv.length);
+
+  const res = await fetch(`${WORKER}/d`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Access-Key': JBIN_ACCESS,
-      'X-Bin-Private': 'false',
-      'X-Bin-Versioning': 'false',
-    },
-    body: JSON.stringify(payload),
+    headers: { 'Content-Type': 'text/plain' },
+    body: toB64url(body),
   });
   if (!res.ok) throw new Error('UPLOAD_FAILED');
-  const json = await res.json();
-  const binId = json && json.metadata && json.metadata.id;
-  if (!binId) throw new Error('NO_BIN_ID');
-  return { url: `${VIEW_BASE}?id=${binId}`, binId };
+
+  const { id, token, expiresAt } = await res.json();
+  if (!id) throw new Error('NO_ID');
+
+  return { url: `${WORKER}/s/${id}#${toB64url(key)}`, id, token, expiresAt };
 }
 
-// 공유 회수 — 삭제를 먼저 시도하고, 키에 Delete 권한이 없으면 빈 내용으로 덮어쓴다.
-// 어느 쪽이든 링크를 열었을 때 내역이 보이지 않는 상태가 된다.
-// 반환: 'DELETED' | 'REVOKED' | 'GONE'(이미 없음) | 'FAILED'
-export async function revokeShare(binId) {
-  if (!binId) return 'GONE';
-
+// 공유 회수. 서버에서 삭제하므로 기존 링크는 즉시 열리지 않는다.
+// 반환: 'DELETED' | 'GONE'(이미 만료·삭제됨) | 'FAILED'
+export async function revokeShare(share) {
+  if (!share || !share.id) return 'GONE';
   try {
-    const del = await fetch(`${JBIN_BASE}/${binId}`, {
+    const res = await fetch(`${WORKER}/d/${share.id}`, {
       method: 'DELETE',
-      headers: { 'X-Access-Key': JBIN_ACCESS },
+      headers: { 'X-Delete-Token': share.token || '' },
     });
-    if (del.ok) return 'DELETED';
-    if (del.status === 404) return 'GONE';
-  } catch (e) {
-    // 네트워크 오류면 덮어쓰기도 실패한다. 아래에서 한 번 더 시도.
-  }
-
-  try {
-    const put = await fetch(`${JBIN_BASE}/${binId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Access-Key': JBIN_ACCESS,
-        'X-Bin-Versioning': 'false',
-      },
-      body: JSON.stringify({ app: 'TripPay', revoked: true }),
-    });
-    if (put.ok) return 'REVOKED';
-    if (put.status === 404) return 'GONE';
+    if (res.ok) return 'DELETED';
+    if (res.status === 404) return 'GONE';
   } catch (e) {}
-
   return 'FAILED';
 }
 
-// 업로드 + 공유. 반환 { url, method, binId, expiresAt }
-// binId·expiresAt은 호출부가 여행 데이터에 저장해 두었다가 만료 정리·공유 취소에 쓴다.
+// 업로드 + 공유. 반환 { url, method, id, token, expiresAt }
+// 공유 시트가 실패해도 id·token은 반드시 반환한다. 잃으면 회수할 수 없는 링크가 남는다.
 export async function shareTrip(data) {
   const payload = buildSharePayload(data);
-  const { url, binId } = await createShareLink(payload);
-  const meta = { binId, expiresAt: payload.expiresAt };
+  const { url, id, token, expiresAt } = await createShareLink(payload);
+  const meta = { id, token, expiresAt };
 
   if (Platform.OS === 'web') {
     if (typeof navigator !== 'undefined' && navigator.share) {
@@ -110,15 +113,11 @@ export async function shareTrip(data) {
       try {
         await navigator.clipboard.writeText(url);
         return { url, method: 'copy', ...meta };
-      } catch (e) {
-        // 복사 권한이 없어도 업로드는 이미 끝났다. 링크를 직접 보여준다.
-      }
+      } catch (e) {}
     }
     return { url, method: 'none', ...meta };
   }
 
-  // 공유 시트를 못 띄우더라도 binId는 반드시 반환한다.
-  // 여기서 throw하면 방금 만든 bin의 id를 잃어 회수할 수 없는 링크가 남는다.
   try {
     await Share.share({ message: url });
     return { url, method: 'share', ...meta };

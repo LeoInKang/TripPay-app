@@ -77,12 +77,12 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
     if (sharing) return;
     setSharing(true);
     try {
-      const { url, method, binId, expiresAt } = await shareTrip({
+      const { url, method, id, token, expiresAt } = await shareTrip({
         trip, deposits, expenses, krwExps,
         balance: { avgRate, acctBal, cardBal, cashBal },
       });
       // 만료 정리·공유 취소에 쓰려면 링크를 어디에 만들었는지 남겨야 한다
-      if (setTrip) setTrip({ ...trip, share: { binId, expiresAt } });
+      if (setTrip) setTrip({ ...trip, share: { id, token, expiresAt } });
       if (method === 'copy') notify('공유 링크를 복사했어요.\n' + url);
       else if (method === 'none') notify('공유 링크:\n' + url);
     } catch (e) {
@@ -95,7 +95,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   const doRevoke = async () => {
     setRevoking(true);
     try {
-      const result = await revokeShare(share.binId);
+      const result = await revokeShare(share);
       if (result === 'FAILED') {
         notify('취소하지 못했어요. 네트워크 연결을 확인하고 다시 시도해 주세요.');
         return;
@@ -108,7 +108,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   };
 
   const handleRevoke = () => {
-    if (revoking || !share?.binId) return;
+    if (revoking || !share?.id) return;
     const msg = '공유를 취소하면 이미 보낸 링크로도 내역을 볼 수 없어요. 취소할까요?';
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined' && window.confirm(msg)) doRevoke();

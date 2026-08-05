@@ -3,7 +3,7 @@
 // 서버는 암호문만 보관한다. 복호화 키는 링크의 '#' 뒤에 실려 브라우저에만 머물고
 // HTTP 요청에 포함되지 않으므로, 운영자도 저장된 내용을 읽을 수 없다.
 //
-//   POST   /d           본문 = iv(12B) + 암호문 → { id, token }
+//   POST   /d           본문 = base64url(iv(12B) + 암호문) → { id, token }
 //   GET    /d/:id       암호문 반환 (뷰어가 호출)
 //   DELETE /d/:id       X-Delete-Token 일치 시 즉시 삭제 (공유 취소)
 //   GET    /s/:id       뷰어 페이지 (Pages의 view.html을 그대로 내보냄)
@@ -50,9 +50,11 @@ export default {
 };
 
 async function create(request, env) {
-  const body = new Uint8Array(await request.arrayBuffer());
-  if (body.length === 0)        return json({ error: 'EMPTY' }, 400);
-  if (body.length > MAX_BODY)   return json({ error: 'TOO_LARGE' }, 413);
+  // 본문은 base64url 텍스트. RN·브라우저 양쪽에서 바이너리 본문을 다루지 않아도 되게 한다.
+  const body = (await request.text()).trim();
+  if (body.length === 0)              return json({ error: 'EMPTY' }, 400);
+  if (body.length > MAX_BODY)         return json({ error: 'TOO_LARGE' }, 413);
+  if (!/^[A-Za-z0-9_-]+$/.test(body)) return json({ error: 'BAD_BODY' }, 400);
 
   const id = randomId(9);      // 12자
   const token = randomId(16);  // 공유 취소용. 앱만 보관한다.
@@ -66,11 +68,11 @@ async function create(request, env) {
 }
 
 async function read(id, env) {
-  const body = await env.SHARES.get(id, { type: 'arrayBuffer' });
+  const body = await env.SHARES.get(id, { type: 'text' });
   if (!body) return json({ error: 'GONE' }, 404);
   return new Response(body, {
     headers: {
-      'Content-Type': 'application/octet-stream',
+      'Content-Type': 'text/plain; charset=utf-8',
       // 링크가 살아 있는 동안만 짧게 캐시. 취소가 곧바로 반영되도록.
       'Cache-Control': 'public, max-age=60',
     },

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
-  Pressable, Animated, Dimensions, Platform
+  Pressable, ScrollView, Dimensions, Platform
 } from 'react-native';
 
 /**
@@ -57,8 +57,8 @@ export default function BottomSheet({
             {/* 타이틀 */}
             <Text style={styles.title}>{title || label || '선택'}</Text>
 
-            {/* 옵션 리스트 */}
-            <View style={styles.optionList}>
+            {/* 옵션 리스트 — 항목이 많아도(참석자 20명, 날짜 필터 등) 스크롤로 전부 닿게 한다 */}
+            <ScrollView style={styles.optionList} bounces={false}>
               {options.map((item, idx) => {
                 const v = item.value ?? item;
                 const l = item.label ?? item;
@@ -80,7 +80,7 @@ export default function BottomSheet({
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </ScrollView>
 
             {/* 취소 버튼 */}
             <TouchableOpacity
@@ -148,6 +148,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 8,
+    // 시트 자체의 maxHeight(70%)는 일반 View 자식을 잘라내기만 하므로,
+    // 목록에 명시적 한계를 줘야 ScrollView가 실제로 스크롤된다.
+    maxHeight: Dimensions.get('window').height * 0.5,
   },
   option: {
     flexDirection: 'row',

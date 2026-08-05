@@ -168,6 +168,12 @@ export default function SettingsScreen({ route, navigation }) {
           </Text>
         </View>
 
+        {/* 도움말 */}
+        <TouchableOpacity style={styles.helpRow} onPress={() => navigation.navigate('Help')} activeOpacity={0.7}>
+          <Text style={styles.helpRowText}>❓ 도움말 — 분담방식 · 대납 처리</Text>
+          <Text style={styles.helpRowChevron}>›</Text>
+        </TouchableOpacity>
+
         {/* 국가/통화 (변경 불가) */}
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>국가 · 통화</Text>
@@ -219,6 +225,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#1a1a1a',
   },
+
+  helpRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#fff', borderRadius: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: 12, paddingVertical: 13, marginBottom: 16,
+  },
+  helpRowText: { fontSize: 14, color: '#1a1a1a', fontWeight: '600' },
+  helpRowChevron: { fontSize: 18, color: '#9b9b9b' },
 
   infoBox: {
     backgroundColor: '#fff',

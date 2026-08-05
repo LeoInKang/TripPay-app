@@ -12,7 +12,7 @@ function notify(msg) {
   }
 }
 
-export default function SettleTab({ trip, setTrip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
+export default function SettleTab({ trip, setTrip, openHelp, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
   const sym  = trip.country.sym;
   const r100 = trip.country.r100;
   const members = trip.members;
@@ -251,6 +251,12 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
           </Text>
         </View>
       )}
+
+      {openHelp && (
+        <TouchableOpacity style={styles.helpLink} onPress={openHelp} hitSlop={8}>
+          <Text style={styles.helpLinkText}>💡 대납·분담 처리가 궁금하면 도움말</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
@@ -348,4 +354,6 @@ const styles = StyleSheet.create({
 
   rateCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, alignItems: 'center' },
   rateText: { fontSize: 12, color: '#6b6b6b' },
+  helpLink: { alignItems: 'center', paddingVertical: 12 },
+  helpLinkText: { fontSize: 12, color: '#378ADD', fontWeight: '600' },
 });

@@ -7,6 +7,7 @@ import SetupScreen   from './screens/SetupScreen';
 import MainScreen    from './screens/MainScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import SettingsScreen from './screens/SettingsScreen';
+import HelpScreen from './screens/HelpScreen';
 import { getCurrentTripId, loadTripData } from './storage';
 import { importTripFile } from './transfer';
 import {
@@ -137,6 +138,7 @@ export default function App() {
         <Stack.Screen name="Main"    component={MainScreen} initialParams={resumeParams} />
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Help" component={HelpScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

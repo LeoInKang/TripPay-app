@@ -93,6 +93,7 @@ export default function MainScreen({ route, navigation }) {
 
   const sharedProps = {
     trip, setTrip,
+    openHelp: () => navigation.navigate('Help'),
     deposits, charges, exchanges, atms, refunds, expenses, krwExps,
     setDeposits, setCharges, setExchanges, setAtms, setRefunds,
     setExpenses, setKrwExps,

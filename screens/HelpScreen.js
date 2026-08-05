@@ -1,8 +1,18 @@
 import React from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, ScrollView,
-  SafeAreaView, Platform, StatusBar
+  SafeAreaView, Platform, StatusBar, Alert
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { RECEIPT_PROMPT } from '../receiptPrompt';
+
+function notify(msg) {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined') window.alert(msg);
+  } else {
+    Alert.alert('알림', msg);
+  }
+}
 
 // 정적 도움말. 운영 규칙의 단일 출처는 docs/feedback-backlog.md — 규칙이 바뀌면 여기도 같이 고칠 것.
 
@@ -89,6 +99,33 @@ export default function HelpScreen({ navigation }) {
           </Text>
         </Card>
 
+        <Card title="영수증 사진으로 자동 입력">
+          <Text style={styles.p}>
+            영수증을 한 장씩 입력할 필요 없이, AI에게 맡길 수 있어요.
+          </Text>
+          <Row label="1. 복사">아래 버튼으로 프롬프트를 복사해요.</Row>
+          <Row label="2. 붙여넣기">쓰는 AI(클로드·챗GPT·제미나이)에 영수증 사진들과 함께 붙여넣어요.</Row>
+          <Row label="3. 저장">AI가 만들어준 JSON을 파일로 저장해 휴대폰으로 옮겨요.</Row>
+          <Row label="4. 가져오기">첫 화면의 "여행 데이터 가져오기"로 그 파일을 열면 끝!</Row>
+          <TouchableOpacity
+            style={styles.copyBtn}
+            activeOpacity={0.8}
+            onPress={async () => {
+              try {
+                await Clipboard.setStringAsync(RECEIPT_PROMPT);
+                notify('프롬프트를 복사했어요.\nAI에 영수증 사진과 함께 붙여넣으세요.');
+              } catch (e) {
+                notify('복사에 실패했어요. 다시 시도해 주세요.');
+              }
+            }}
+          >
+            <Text style={styles.copyBtnText}>📋 AI 프롬프트 복사</Text>
+          </TouchableOpacity>
+          <Text style={styles.pSub}>
+            금액이 애매한 영수증은 AI가 되물어요. 회비·환전은 영수증에 없으니 가져온 뒤 직접 입력하세요.
+          </Text>
+        </Card>
+
         <Card title="왜 이렇게 하면 되나요?">
           <Text style={styles.p}>
             정산은 <Text style={styles.b}>개인 순액 = 낸 돈 − 부담</Text>으로 계산돼요.{'\n'}
@@ -151,4 +188,7 @@ const styles = StyleSheet.create({
 
   ruleBox: { backgroundColor: '#FAEEDA', borderRadius: 8, padding: 12, marginBottom: 4 },
   ruleText: { fontSize: 13, color: '#633806', lineHeight: 19, marginBottom: 6 },
+
+  copyBtn: { backgroundColor: '#1a3a5c', borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 6, marginBottom: 10 },
+  copyBtnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
 });

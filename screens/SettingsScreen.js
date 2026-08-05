@@ -20,8 +20,11 @@ export default function SettingsScreen({ route, navigation }) {
   const [startDate, setStartDate] = useState(trip?.startDate || '');
   const [endDate,   setEndDate]   = useState(trip?.endDate || '');
   const [note,      setNote]      = useState(trip?.note || '');
-  const [members,   setMembers]   = useState(trip?.members || []);
+  // orig = 저장된 원래 이름(신규는 null). 이름을 바꾸면 저장 시 renames로 내역까지 전파된다.
+  const [memberRows, setMemberRows] = useState((trip?.members || []).map(m => ({ orig: m, name: m })));
   const [newMember, setNewMember] = useState('');
+  const [editIdx,   setEditIdx]   = useState(null);
+  const [editName,  setEditName]  = useState('');
 
   // 삭제 가능 여부: 회비 또는 지출(참여자·분담값)에 참조된 멤버는 삭제 불가
   const memberHasData = (m) => {
@@ -36,14 +39,32 @@ export default function SettingsScreen({ route, navigation }) {
   const addMember = () => {
     const name = newMember.trim();
     if (!name) return;
-    if (members.includes(name)) { notify('이미 있는 참석자예요.'); return; }
-    setMembers([...members, name]);
+    if (memberRows.some(r => r.name === name)) { notify('이미 있는 참석자예요.'); return; }
+    setMemberRows([...memberRows, { orig: null, name }]);
     setNewMember('');
   };
-  const removeMember = (m) => {
-    if (members.length <= 1) { notify('참석자는 최소 1명이 필요해요.'); return; }
-    if (memberHasData(m)) { notify(`${m}님은 회비·지출 내역이 있어 삭제할 수 없어요. 내역을 먼저 정리해 주세요.`); return; }
-    setMembers(members.filter(x => x !== m));
+  const removeMember = (idx) => {
+    if (memberRows.length <= 1) { notify('참석자는 최소 1명이 필요해요.'); return; }
+    const row = memberRows[idx];
+    // 내역은 저장된 원래 이름으로 참조되므로 orig 기준으로 검사한다
+    if (memberHasData(row.orig || row.name)) {
+      notify(`${row.name}님은 회비·지출 내역이 있어 삭제할 수 없어요. 내역을 먼저 정리해 주세요.`);
+      return;
+    }
+    if (editIdx === idx) setEditIdx(null);
+    setMemberRows(memberRows.filter((_, j) => j !== idx));
+  };
+
+  const startRename = (idx) => {
+    setEditIdx(idx);
+    setEditName(memberRows[idx].name);
+  };
+  const confirmRename = () => {
+    const name = editName.trim();
+    if (!name) { notify('이름을 입력해 주세요.'); return; }
+    if (memberRows.some((r, j) => j !== editIdx && r.name === name)) { notify('이미 있는 참석자예요.'); return; }
+    setMemberRows(rows => rows.map((r, j) => (j === editIdx ? { ...r, name } : r)));
+    setEditIdx(null);
   };
 
   // 시작일 선택 시 종료일이 비어 있으면 다음날로 자동 설정
@@ -67,20 +88,28 @@ export default function SettingsScreen({ route, navigation }) {
       notify('여행명을 입력해 주세요.');
       return;
     }
-    if (!members.length) { notify('참석자를 최소 1명 입력해 주세요.'); return; }
+    if (editIdx != null) { notify('참석자 이름 수정을 먼저 완료해 주세요.'); return; }
+    const names = memberRows.map(r => r.name.trim()).filter(Boolean);
+    if (!names.length) { notify('참석자를 최소 1명 입력해 주세요.'); return; }
+    if (new Set(names).size !== names.length) { notify('참석자 이름이 겹쳐요.'); return; }
+
+    // 이름이 바뀐 기존 참석자 → 저장 시 회비·지출 내역의 참조도 함께 바꾼다
+    const renames = {};
+    memberRows.forEach(r => { if (r.orig && r.orig !== r.name) renames[r.orig] = r.name; });
+
     const updated = {
       ...trip,
       name: tripName.trim(),
       startDate,
       endDate,
       note,
-      members,
+      members: names,
     };
-    const oldMembers = trip?.members || [];
-    const added = members.filter(m => !oldMembers.includes(m));
+    const renamedOld = (trip?.members || []).map(m => renames[m] || m);
+    const added = names.filter(n => !renamedOld.includes(n));
 
     const finish = (retro) => {
-      if (onSave) onSave(updated, retro);
+      if (onSave) onSave(updated, retro, renames);
       navigation.goBack();
     };
 
@@ -142,12 +171,41 @@ export default function SettingsScreen({ route, navigation }) {
         {/* 참석자 편집 */}
         <View style={styles.field}>
           <Text style={styles.label}>참석자</Text>
-          {members.map(m => (
-            <View key={m} style={styles.memberRow}>
-              <Text style={styles.memberName}>{m}</Text>
-              <TouchableOpacity onPress={() => removeMember(m)} style={styles.memberDel} hitSlop={8}>
-                <Text style={styles.memberDelText}>✕</Text>
-              </TouchableOpacity>
+          {memberRows.map((row, i) => (
+            <View key={`m-${i}`} style={[styles.memberRow, editIdx === i && styles.memberRowEditing]}>
+              {editIdx === i ? (
+                <>
+                  <TextInput
+                    style={styles.memberInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    onSubmitEditing={confirmRename}
+                    returnKeyType="done"
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={confirmRename} style={styles.memberOkBtn} hitSlop={6}>
+                    <Text style={styles.memberOkText}>확인</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setEditIdx(null)} style={styles.memberDel} hitSlop={8}>
+                    <Text style={styles.memberCancelText}>취소</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <Text style={styles.memberName}>
+                    {row.name}
+                    {row.orig && row.orig !== row.name ? <Text style={styles.renamedMark}>  (변경됨)</Text> : null}
+                  </Text>
+                  <View style={styles.memberActions}>
+                    <TouchableOpacity onPress={() => startRename(i)} style={styles.memberEditBtn} hitSlop={6}>
+                      <Text style={styles.memberEditText}>수정</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => removeMember(i)} style={styles.memberDel} hitSlop={8}>
+                      <Text style={styles.memberDelText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              )}
             </View>
           ))}
           <View style={styles.addRow}>
@@ -165,6 +223,7 @@ export default function SettingsScreen({ route, navigation }) {
           </View>
           <Text style={styles.infoHint}>
             여행 중 추가한 참석자는 이후 지출부터 반영돼요. 회비·지출 내역이 있는 참석자는 삭제할 수 없어요.
+            이름을 수정하면 저장 시 회비·지출 내역의 이름도 함께 바뀌어요.
           </Text>
         </View>
 
@@ -237,7 +296,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.12)',
     paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6,
   },
-  memberName: { fontSize: 15, color: '#1a1a1a', fontWeight: '500' },
+  memberRowEditing: { borderColor: '#378ADD', borderWidth: 1.2 },
+  memberName: { fontSize: 15, color: '#1a1a1a', fontWeight: '500', flex: 1 },
+  renamedMark: { fontSize: 12, color: '#378ADD', fontWeight: '600' },
+  memberActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  memberEditBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: '#eef4fb' },
+  memberEditText: { fontSize: 12, color: '#0c447c', fontWeight: '700' },
+  memberInput: {
+    flex: 1, fontSize: 15, color: '#1a1a1a', paddingVertical: 2, paddingHorizontal: 0, marginRight: 8,
+  },
+  memberOkBtn: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8, backgroundColor: '#1a3a5c', marginRight: 4 },
+  memberOkText: { fontSize: 12, color: '#fff', fontWeight: '700' },
+  memberCancelText: { fontSize: 12, color: '#6b6b6b', fontWeight: '600' },
   memberDel: { paddingHorizontal: 6, paddingVertical: 2 },
   memberDelText: { fontSize: 15, color: '#c0413f', fontWeight: '700' },
   addRow: { flexDirection: 'row', gap: 8, marginTop: 2 },

@@ -77,16 +77,43 @@ export default function MainScreen({ route, navigation }) {
   };
 
   // 여행 설정 저장. retro=false면 기존 '전원 균등' 지출을 이전 멤버로 고정(소급 방지).
-  const handleTripSave = (updated, retro = false) => {
-    const oldMembers = trip.members || [];
+  // renames = { 옛이름: 새이름 }. 이름은 회비 mem·지출 participants·split.values의 키로
+  // 쓰이므로, 여기서 함께 바꿔주지 않으면 기존 내역과 연결이 끊겨 정산이 어긋난다.
+  const handleTripSave = (updated, retro = false, renames = {}) => {
+    const hasRenames = Object.keys(renames).length > 0;
+    const mapName = (n) => renames[n] || n;
+
+    const mapExp = (e) => {
+      if (!hasRenames) return e;
+      const next = { ...e };
+      if (e.participants && e.participants.length) next.participants = e.participants.map(mapName);
+      if (e.split && e.split.values) {
+        const values = {};
+        Object.entries(e.split.values).forEach(([k, v]) => { values[mapName(k)] = v; });
+        next.split = { ...e.split, values };
+      }
+      return next;
+    };
+
+    let nextExpenses = expenses.map(mapExp);
+    let nextKrwExps  = krwExps.map(mapExp);
+    if (hasRenames) {
+      setDeposits(deposits.map(d => (renames[d.mem] ? { ...d, mem: renames[d.mem] } : d)));
+    }
+
+    const oldMembers = (trip.members || []).map(mapName);
     const newMembers = updated.members || oldMembers;
     const added = newMembers.filter(m => !oldMembers.includes(m));
     if (added.length > 0 && !retro) {
       const freeze = (list) => list.map(e =>
         (e.participants && e.participants.length) ? e : { ...e, participants: [...oldMembers] }
       );
-      setExpenses(freeze(expenses));
-      setKrwExps(freeze(krwExps));
+      nextExpenses = freeze(nextExpenses);
+      nextKrwExps  = freeze(nextKrwExps);
+    }
+    if (hasRenames || (added.length > 0 && !retro)) {
+      setExpenses(nextExpenses);
+      setKrwExps(nextKrwExps);
     }
     setTrip(updated);
   };

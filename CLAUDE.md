@@ -5,20 +5,21 @@
 ## 프로젝트
 TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전 → 지출 기록 → **개인별 정산**까지 한 화면에서.
 
-- 스택: Expo SDK 54 · React Native 0.81.5 · React 19 · React Navigation 7 · AsyncStorage. **서버 없음**(전 데이터 기기 로컬).
+- 스택: Expo SDK 54 · React Native 0.81.5 · React 19 · React Navigation 7 · AsyncStorage. 여행 데이터는 **기기 로컬**에만 있고, 공유할 때만 암호문이 서버로 간다.
 - 배포: Android 단독(Play Console). 패키지 `com.leoinkang.trippay` · Play 계정 Fompy Studio(fompy98@gmail.com).
 - Expo 계정 `leoinkang` · EAS projectId `3d6bc013-393a-4523-a6da-b69c1013e499`.
 - 리포: GitHub `LeoInKang/TripPay-app` (main) · 작업 폴더 `~/projects/apps/TripPay-app`.
-- 개인정보처리방침: `docs/privacy-policy.html` → GitHub Pages로 게시 중 `https://leoinkang.github.io/TripPay-app/privacy-policy.html` (Play Console 제출본, 시행일 2026-07-11, 국문+영문 병기, 문의 fompy98@gmail.com).
+- 개인정보처리방침: `docs/privacy-policy.html` → `https://leoinkang.github.io/TripPay-app/privacy-policy.html` (Play 제출본, 국문+영문, 문의 fompy98@gmail.com). **고치면 푸시해야 반영된다.**
+- 공유 서버: Cloudflare Worker `https://trippay.fompy98.workers.dev` (소스 `server/`, KV `SHARES`). 계정 fompy98@gmail.com.
 - UI 언어는 **한국어 전용**. 통화 기준은 항상 **원화(KRW)**.
 
-## 현재 상태 (인계 2026-07-29 기준)
-- 비공개 테스트 **v4(versionCode 4)** 배포 완료. 프로덕션 **미출시**.
-- Play 14일 요건: 7/29에 6일 경과 → **2026-08-06 전후 충족 예정**. 테스터 12명 이상 유지 필요(등록 20명).
+## 현재 상태 (2026-08-05 확인)
+- 비공개 테스트 **v4(versionCode 4)** 배포 중. 프로덕션 **미출시**. v5 미빌드.
+- Play 14일 요건: 콘솔 대시보드 실측 기준 **8일 경과 · 테스터 12명 유지**(등록 20명) → **8/10 전후 충족 예정**. 인계문서의 8/6은 카운터 리셋으로 어긋난 값이었다.
+- "프로덕션 신청" 버튼은 아직 비활성. 관리형 게시 **꺼짐**(검토 통과 시 자동 배포).
 - 참여 링크 `https://play.google.com/apps/testing/com.leoinkang.trippay`
-- 관리형 게시 **꺼짐**(검토 통과 시 자동 배포).
-- 다음 할 일: ① 요건 충족 시 Play Console에서 **프로덕션 신청**(비공개 테스트 관련 질문 답변) → ② 승인 후 프로덕션 트랙 출시 → ③ 그 사이 테스터 수 유지 확인.
-- ⚠️ **v4 라운드 작업물이 아직 미커밋**: `settle.js`·`components/SplitEditor.js`·`components/CountryPicker.js`·`countries.js`·`test-settle.mjs`·`docs/feedback-backlog.md`가 untracked, 탭·화면 6종이 modified. 빌드는 나갔는데 소스 이력이 없다 → 작업 시작 전 커밋 여부부터 정리할 것.
+- ⚠️ **Play 데이터 보안 신고가 실제와 다르다**: 2026-07-19 제출본이 "수집·공유 없음"인데 공유 기능은 서버로 전송한다. **프로덕션 신청 전에 반드시 수정**. 답변안은 `docs/play-data-safety.md`, 제출은 Leo가 직접.
+- 다음 할 일: ① 데이터 보안 양식 수정 → ② v5 빌드·업로드(정산 버그 수정 + 암호화 공유) → ③ 요건 충족 시 프로덕션 신청.
 
 ## 구조
 ```
@@ -33,10 +34,11 @@ components/          BottomSheet · Segment · DateField(월일) · FullDateFiel
 settle.js            ★ 개인별 정산 엔진 (유일한 정산 로직 단일 출처)
 storage.js           AsyncStorage CRUD (trippay:trips / trippay:currentTripId / trippay:trip:{id})
 transfer.js          여행 JSON 내보내기·가져오기 (기기 간 이전 수단)
-share.js             JSONBin 업로드 → 외부 view.html 공유 링크
+share.js             정산 공유 — AES-256-GCM 암호화 → 워커 업로드 → 링크 생성·취소
 countries.js         국가·통화 47개 (COUNTRIES·POPULAR_CODES·searchCountries)
 sampleData.js        개발용 샘플 (__DEV__에서만 Landing에 버튼 노출)
-docs/                feedback-backlog.md(피드백·스코프) · privacy-policy.html(Play 제출용)
+server/              Cloudflare Worker (공유 서버) + wrangler.toml + README
+docs/                feedback-backlog.md · privacy-policy.html · play-data-safety.md
 play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ```
 
@@ -70,7 +72,16 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
    - 비율: 엔진은 **총 가중치로 정규화**하므로 합계가 90이어도 계산 자체는 맞다. 다만 30을 넣은 사람이 실제로는 33.3%를 물어 **입력값과 실제가 어긋나므로** 100%를 강제한다. 엔진(`settle.js`)은 손대지 않았다 — UI 제약일 뿐이라 기존에 저장된 데이터의 계산 결과는 그대로다.
    - 100% 강제로 잃는 "배수 입력"(2:1:1)은 **`normalizeRatio` + '100%로 맞추기' 버튼**으로 되살렸다. 비를 유지한 채 소수 둘째 자리까지 정규화하고 합계를 정확히 100.00으로 맞춘다(1:1:1 → 33.34/33.33/33.33). 비율 모드로 전환할 때도 이 함수로 균등 초기화해 곧바로 저장 가능한 상태로 둔다.
    - ※ 엔진에는 `shares`(배수) 모드가 남아 있으나 UI 미노출. 위 버튼이 그 역할을 대신한다.
-5. 정산 로직을 고쳤으면 **`node test-settle.mjs` 통과 필수**(현재 20/20).
+6. 정산 로직을 고쳤으면 **`node test-settle.mjs` 통과 필수**(현재 58/58).
+
+## 공유 구조 (2026-08-05 전면 교체)
+평문을 공개 저장하던 JSONBin 방식을 걷어내고 **암호화 + 서버**로 바꿨다.
+
+- 앱이 여행 데이터를 **AES-256-GCM으로 암호화**해 워커에 올리고, **복호화 키는 링크의 `#` 뒤에만** 담는다. 프래그먼트는 HTTP 요청에 실려가지 않으므로 **키가 서버에 도달하지 않는다** — 개발자도 인프라 제공자도 내용을 못 읽는다.
+- 링크는 `https://trippay.fompy98.workers.dev/s/<id>#<key>` 형태로 **약 94자**.
+- **만료는 KV TTL 7일**이 처리한다(앱 실행과 무관). **취소는 삭제 토큰**으로 서버에서 즉시 삭제. 토큰은 `trip.share`에만 있고 서버엔 해시만 둔다.
+- 실측 확인: 업로드→복호화 일치, 저장분에 평문 없음, 틀린 토큰 삭제 거부(403), 취소 후 404, 틀린 키는 GCM 인증 실패.
+- 옛 `?id=` 링크(JSONBin)와 `#페이로드` 링크도 뷰어가 계속 처리한다.
 
 ## 설계 결정 (되돌리지 말 것)
 - **결제자(선결제·대납) 필드 없음.** 기능이 아니라 운영으로 처리: 돌려준 돈을 지출 1건으로 기록(이중차감 금지), 공금 부족 시 균등 회비 추가 징수 후 지급. 근거·가이드는 `docs/feedback-backlog.md`.
@@ -82,9 +93,8 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ## 알려진 부채·주의
 - **잔액 계산이 HomeTab·SettleTab에 아직 중복**(계좌/카드/현금 3종). 한쪽만 고치면 화면 간 숫자가 어긋난다 — 고칠 땐 양쪽 동시에, 여력 되면 avgRate처럼 공용 모듈로 추출.
   - avgRate와 총 입금·총 지출 환산은 **2026-08-04에 `getAvgRate`로 통일 완료**(그 전까지 두 탭 숫자가 달랐다).
-- ⚠️ **공유 기능 ↔ 개인정보처리방침 불일치.** `share.js`는 여행 데이터(참석자 이름·지출·메모)를 외부 서버 JSONBin에 **공개 bin**(`X-Bin-Private: false`)으로 업로드하고 링크를 만든다. 반면 방침 §3·§5는 "모든 데이터는 기기에만 저장, 외부 서버로 전송하지 않음 / 제3자 없음"이라고 단언한다. 프로덕션 신청 전에 **방침 문구 보강**(사용자가 공유를 실행할 때만 JSONBin으로 전송·링크를 아는 사람은 열람 가능) 또는 기능 조정 중 하나가 필요하다. Play Data safety 답변도 같이 맞출 것.
-- `share.js`에 JSONBin **쓰기 전용 키가 하드코딩**되어 있다. 공유 뷰어는 별도 리포 `LeoInKang/travel-expense-app`의 `view.html`(로컬 클론 `~/projects/apps/trippay`). 정산 로직은 `settle.js`를 그대로 이식해 뒀으니 **엔진을 고치면 뷰어도 같이 고쳐야 한다.**
-- **키 권한 실측 결과(2026-08-04)**: `DELETE`는 401 "does not have permission to delete the bin" — **삭제 불가**. `PUT` 덮어쓰기는 200. 그래서 `revokeShare()`의 실제 실행 경로는 항상 폴백(덮어쓰기)이다. 생성 시 `X-Bin-Versioning: false`를 보내며, 덮어쓴 뒤 버전 0·1·2 조회가 모두 404인 것도 확인했다(옛 내용 복구 불가).
+- 공유 뷰어는 별도 리포 `LeoInKang/travel-expense-app`의 `view.html`(로컬 클론 `~/projects/apps/trippay`). 정산 로직을 `settle.js`에서 그대로 이식해 뒀으니 **엔진을 고치면 뷰어도 같이 고쳐야 한다.**
+- 워커가 `GET /s/:id`에서 Pages의 `view.html`을 가져와 서빙한다. 즉 **뷰어를 고치면 Pages에 푸시해야 반영**된다(워커 재배포는 불필요).
 - `settle.js` 상단 주석에 "(회비 + 선결제)"가 남아 있으나 선결제는 스코프에서 제거됨(코드는 무관).
 - 루트에 45MB `.aab` 2개가 **untracked이고 .gitignore에도 없다** → `git add .` 하면 그대로 커밋된다.
 - 미디어 라이브러리에 옛 이름 스크린샷(1~5.jpg) 잔존. 스토어에는 새 버전만 적용됨, 정리는 선택.
@@ -93,7 +103,8 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ## 자주 쓰는 명령
 ```bash
 npx expo start          # 개발 서버. w=웹, 카메라앱으로 QR 스캔=실기기. --tunnel은 ngrok 장애 시 실패 가능
-node test-settle.mjs    # 정산 엔진 단위 테스트 (20개)
+node test-settle.mjs    # 정산 엔진 단위 테스트 (58개)
+cd server && wrangler deploy   # 공유 서버 배포 (Cloudflare 로그인 필요)
 eas build -p android --profile production   # versionCode 자동 증가 → .aab(45MB) 다운로드
 ```
 빌드 후 Play Console **비공개 테스트 트랙**에 업로드. `eas.json`의 `appVersionSource: "remote"`라 **versionCode는 EAS 서버가 관리** — `app.json`의 `versionCode: 1`은 무시되는 값이니 손대지 말 것. 사용자에게 보이는 버전은 `app.json`의 `version`(현재 1.0.0)과 App.js 랜딩의 "TripPay v1.0" 문자열 두 곳이라, 올릴 땐 같이 올린다.

@@ -26,7 +26,9 @@ export default function MainScreen({ route, navigation }) {
     initialDeposits=[], initialCharges=[], initialExchanges=[],
     initialAtms=[], initialRefunds=[], initialExpenses=[], initialKrwExps=[],
   } = route.params;
-  const [activeTab, setActiveTab] = useState('home');
+  const [activeTab, setActiveTab] = useState(route.params.initialTab || 'home');
+  // 영수증 가져오기 직후 새 지출을 표시하기 위한 일회성 값 (저장되지 않음)
+  const highlightIds = route.params.highlightIds || [];
 
   const [trip,      setTrip]      = useState(initialTrip);
 
@@ -120,6 +122,8 @@ export default function MainScreen({ route, navigation }) {
 
   const sharedProps = {
     trip, setTrip,
+    highlightIds,
+    openImportAI: () => navigation.navigate('ImportAI', { targetTripId: trip.id }),
     deposits, charges, exchanges, atms, refunds, expenses, krwExps,
     setDeposits, setCharges, setExchanges, setAtms, setRefunds,
     setExpenses, setKrwExps,

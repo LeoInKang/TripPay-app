@@ -23,11 +23,17 @@ function fmtInt(v) {
   return parseInt(digits, 10).toLocaleString('ko-KR');
 }
 
-export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
+export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps, openImportAI }) {
   const sym = trip.country.sym;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {openImportAI && (
+        <TouchableOpacity style={styles.aiBtn} onPress={openImportAI} activeOpacity={0.8}>
+          <Text style={styles.aiBtnText}>🧾 AI로 영수증 입력</Text>
+          <Text style={styles.aiBtnHint}>영수증 사진을 AI에 읽혀 이 여행에 바로 추가</Text>
+        </TouchableOpacity>
+      )}
       <FxExpenseForm
         trip={trip}
         expenses={expenses}
@@ -212,6 +218,18 @@ function KrwExpenseForm({ trip, krwExps, setKrwExps }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f0eee8' },
   content: { padding: 12, paddingBottom: 32 },
+
+  aiBtn: {
+    backgroundColor: '#eef4fb',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    borderWidth: 0.5,
+    borderColor: 'rgba(55,138,221,0.4)',
+  },
+  aiBtnText: { fontSize: 14, fontWeight: '700', color: '#0c447c' },
+  aiBtnHint: { fontSize: 11, color: '#6b6b6b', marginTop: 2 },
 
   card: {
     backgroundColor: '#fff',

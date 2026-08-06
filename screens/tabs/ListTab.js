@@ -15,7 +15,7 @@ function fmtInt(v) {
   return parseInt(digits, 10).toLocaleString('ko-KR');
 }
 
-export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
+export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
   const [filterPay, setFilterPay]   = useState('all');
   const sym = trip.country.sym;
@@ -126,10 +126,22 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
           </View>
         ) : (
           filtered.map(item => (
-            <View key={item.id} style={[styles.row, editItem && editItem.id === item.id && styles.rowEditing]}>
+            <View
+              key={item.id}
+              style={[
+                styles.row,
+                highlightIds.includes(item.id) && styles.rowNew,
+                editItem && editItem.id === item.id && styles.rowEditing,
+              ]}
+            >
               <View style={styles.info}>
                 <View style={styles.nameLine}>
                   <Text style={styles.name}>{item.name}</Text>
+                  {highlightIds.includes(item.id) && (
+                    <View style={styles.badgeNew}>
+                      <Text style={styles.badgeNewText}>새로 추가</Text>
+                    </View>
+                  )}
                   {item.type === 'krw' && (
                     <View style={styles.badgeKrw}>
                       <Text style={styles.badgeKrwText}>원화</Text>
@@ -305,6 +317,14 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0,0,0,0.06)',
   },
   rowEditing: { borderColor: '#378ADD', borderWidth: 1.2 },
+  rowNew: { backgroundColor: '#eef6ff', borderColor: 'rgba(55,138,221,0.5)' },
+  badgeNew: {
+    backgroundColor: '#378ADD',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  badgeNewText: { fontSize: 9, color: '#fff', fontWeight: '700' },
   info: { flex: 1 },
   nameLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   name: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },

@@ -17,7 +17,10 @@ function notify(msg) {
 
 // 클립보드 붙여넣기만으로 AI가 읽은 영수증을 여행에 넣는 화면.
 // 네트워크를 쓰지 않는다 — 데이터는 클립보드에서 바로 온다.
-export default function ImportAIScreen({ navigation }) {
+// targetTripId(지출 탭에서 진입)가 있으면 그 여행에 바로 추가 — 여행 선택을 묻지 않는다.
+// 랜딩에서 진입하면 기존처럼 여행을 고르거나 새 여행으로 만든다.
+export default function ImportAIScreen({ navigation, route }) {
+  const targetTripId = route?.params?.targetTripId || null;
   const [bundle, setBundle]   = useState(null);   // parseAiJson 결과
   const [trips, setTrips]     = useState([]);
   const [target, setTarget]   = useState(null);   // 여행 id 또는 '__new__'
@@ -54,6 +57,10 @@ export default function ImportAIScreen({ navigation }) {
       data.batchId = 'b_' + h.toString(36);
     }
     setBundle(data);
+    if (targetTripId) {
+      setTarget(targetTripId); // 지출 탭에서 온 경우: 현재 여행 고정
+      return;
+    }
     // 기본 대상: 통화가 맞는 가장 최근 여행, 없으면 새 여행
     const code = data.trip?.country?.code;
     const match = trips.find(t => t.country?.code === code);
@@ -84,6 +91,9 @@ export default function ImportAIScreen({ navigation }) {
     try {
       const now = Date.now();
       const stamp = (list, offset) => (list || []).map((e, i) => ({ ...e, id: now + offset + i }));
+      const newFx  = stamp(bundle.expenses, 0);
+      const newKrw = stamp(bundle.krwExps, 100000);
+      const newIds = [...newFx, ...newKrw].map(e => e.id);
 
       if (target === '__new__') {
         const trip = { ...bundle.trip };
@@ -92,12 +102,12 @@ export default function ImportAIScreen({ navigation }) {
         const data = {
           trip,
           deposits: [], charges: [], exchanges: [], atms: [], refunds: [],
-          expenses: stamp(bundle.expenses, 0),
-          krwExps:  stamp(bundle.krwExps, 100000),
+          expenses: newFx,
+          krwExps:  newKrw,
         };
         await saveTripData(trip.id, data);
         await setCurrentTripId(trip.id);
-        openTrip(data);
+        openTrip(data, newIds);
         return;
       }
 
@@ -115,17 +125,18 @@ export default function ImportAIScreen({ navigation }) {
       }
 
       data.trip = { ...data.trip, importedBatches: [...batches, bundle.batchId] };
-      data.expenses = [...(data.expenses || []), ...stamp(bundle.expenses, 0)];
-      data.krwExps  = [...(data.krwExps  || []), ...stamp(bundle.krwExps, 100000)];
+      data.expenses = [...(data.expenses || []), ...newFx];
+      data.krwExps  = [...(data.krwExps  || []), ...newKrw];
       await saveTripData(data.trip.id, data);
       await setCurrentTripId(data.trip.id);
-      openTrip(data);
+      openTrip(data, newIds);
     } finally {
       setBusy(false);
     }
   };
 
-  const openTrip = (data) => {
+  // 가져온 뒤 내역 탭으로 바로 이동, 방금 추가된 지출은 하이라이트 표시
+  const openTrip = (data, highlightIds) => {
     navigation.reset({
       index: 0,
       routes: [{ name: 'Main', params: {
@@ -137,6 +148,8 @@ export default function ImportAIScreen({ navigation }) {
         initialRefunds:   data.refunds   || [],
         initialExpenses:  data.expenses  || [],
         initialKrwExps:   data.krwExps   || [],
+        initialTab: 'list',
+        highlightIds: highlightIds || [],
       } }],
     });
   };
@@ -199,6 +212,19 @@ export default function ImportAIScreen({ navigation }) {
               {krwCount > 0 ? `원화 지출 ${krwCount}건 · ₩${fmt(krwSum)}` : ''}
             </Text>
 
+            {targetTripId ? (() => {
+              const t = trips.find(x => x.id === targetTripId);
+              const mismatch = t && fxCount > 0 && t.country?.code !== code;
+              return (
+                <View style={[styles.pickRow, styles.pickRowSel]}>
+                  <Text style={[styles.pickText, styles.pickTextSel]}>
+                    {t?.country?.flag || '🌏'} {t?.name || '현재 여행'}에 추가돼요
+                    {mismatch ? <Text style={styles.pickWarn}>  통화 다름</Text> : null}
+                  </Text>
+                </View>
+              );
+            })() : (
+            <>
             <Text style={styles.pickLabel}>어느 여행에 넣을까요?</Text>
             {trips.map(t => {
               const codeMatch = t.country?.code === code;
@@ -222,6 +248,8 @@ export default function ImportAIScreen({ navigation }) {
               </Text>
               {target === '__new__' && <Text style={styles.pickCheck}>✓</Text>}
             </TouchableOpacity>
+            </>
+            )}
 
             <TouchableOpacity
               style={[styles.btn, styles.btnDark, busy && { opacity: 0.6 }]}

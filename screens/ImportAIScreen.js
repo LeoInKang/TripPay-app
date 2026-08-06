@@ -261,7 +261,10 @@ export default function ImportAIScreen({ navigation, route }) {
             >
               <Text style={styles.btnText}>{busy ? '추가하는 중…' : `지출 ${fxCount + krwCount}건 추가하기`}</Text>
             </TouchableOpacity>
-            <Text style={styles.hint}>분담은 전원 균등으로 들어가요. 필요한 지출만 내역에서 조정하세요.</Text>
+            <Text style={styles.hint}>
+              분담은 전원 균등, 카드 결제는 트래블카드로 들어가요.
+              영수증만으로는 신용카드를 구분할 수 없으니, 신용카드로 낸 건은 내역에서 바꿔 주세요.
+            </Text>
           </View>
         )}
 

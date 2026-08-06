@@ -8,10 +8,8 @@ import MainScreen    from './screens/MainScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import HelpScreen from './screens/HelpScreen';
-import * as Clipboard from 'expo-clipboard';
 import { getCurrentTripId, loadTripData } from './storage';
 import { importTripFile } from './transfer';
-import { RECEIPT_PROMPT } from './receiptPrompt';
 import {
   SAMPLE_TRIP, SAMPLE_DEPOSITS, SAMPLE_CHARGES,
   SAMPLE_EXCHANGES, SAMPLE_EXPENSES
@@ -37,16 +35,6 @@ function LandingScreen({ navigation }) {
       initialExchanges: SAMPLE_EXCHANGES,
       initialExpenses:  SAMPLE_EXPENSES,
     });
-  };
-
-  // 영수증 사진을 AI에 맡길 때 쓰는 프롬프트 복사
-  const copyReceiptPrompt = async () => {
-    try {
-      await Clipboard.setStringAsync(RECEIPT_PROMPT);
-      notify('프롬프트를 복사했어요.\nAI(클로드·챗GPT·제미나이)에 영수증 사진과 함께 붙여넣으세요.\n받은 JSON 파일은 "여행 데이터 가져오기"로 열면 됩니다.');
-    } catch (e) {
-      notify('복사에 실패했어요. 다시 시도해 주세요.');
-    }
   };
 
   // JSON 파일에서 여행 데이터 가져오기
@@ -91,9 +79,6 @@ function LandingScreen({ navigation }) {
           </TouchableOpacity>
           <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('History')}>
             <Text style={styles.btnSecondaryText}>📋 히스토리</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={copyReceiptPrompt} hitSlop={8}>
-            <Text style={styles.promptLink}>📷 영수증을 AI로 입력하기 — 프롬프트 복사</Text>
           </TouchableOpacity>
           {/* 개발용: 출시 빌드(__DEV__ === false)에서는 자동으로 숨겨짐 */}
           {__DEV__ && (
@@ -176,6 +161,5 @@ const styles = StyleSheet.create({
   btnSecondaryText: { color: '#ffffff', fontSize: 15, fontWeight: '500' },
   btnDev: { backgroundColor: 'rgba(255,200,0,0.2)', borderRadius: 16, paddingVertical: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,200,0,0.4)' },
   btnDevText: { color: '#ffd700', fontSize: 13, fontWeight: '600' },
-  promptLink: { color: 'rgba(255,255,255,0.65)', fontSize: 13, fontWeight: '500', textAlign: 'center', paddingVertical: 4 },
   version: { color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 16 },
 });

@@ -30,10 +30,11 @@ screens/
   SettingsScreen     여행명·기간·메모·참석자 편집 (국가·통화는 변경 불가) + 도움말 진입점
   ImportAIScreen     AI 영수증 가져오기 — 프롬프트 복사 + 클립보드 붙여넣기 → 여행 선택·미리보기·병합
   HelpScreen         도움말 — 분담방식·대납 처리 (운영 규칙의 사용자용 요약. 규칙 바뀌면 feedback-backlog.md와 함께 수정)
-  tabs/  Home 현황 | Deposit 회비 | Charge 충전·환전·ATM·잔액이전 | Add 지출입력 | List 내역·수정 | Settle 정산·공유
+  tabs/  Home 현황 | Deposit 회비 | Charge 충전·환전·ATM·잔액이전 | Add 지출입력(외화·원화 통합 폼) | List 내역·수정 | Settle 정산·공유
 components/          BottomSheet · Segment · DateField(월일) · FullDateField(연월일) · CountryPicker · SplitEditor
 settle.js            ★ 개인별 정산 엔진 (유일한 정산 로직 단일 출처)
 storage.js           AsyncStorage CRUD (trippay:trips / trippay:currentTripId / trippay:trip:{id})
+migrate.js           읽어 들인 여행 데이터를 현재 스키마로 변환 (storage·transfer·ImportAI 세 경로에서 통과)
 transfer.js          여행 JSON 내보내기·가져오기 (기기 간 이전 수단)
 share.js             정산 공유 — AES-256-GCM 암호화 → 워커 업로드 → 링크 생성·취소
 countries.js         국가·통화 47개 (COUNTRIES·POPULAR_CODES·searchCountries)
@@ -50,11 +51,11 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 |---|---|---|
 | `trip` | 여행 메타 | `id, name, startDate, endDate, country{flag,name,code,sym,r100,exRate}, members[], note` |
 | `deposits` | 회비 납부 | `mem, cur('KRW'\|'LOCAL'), amt, rate, krwEquiv, date, note` |
-| `charges` | 카드(트레블월렛) 충전 | `krw, local, rate, date` |
+| `charges` | 카드(트래블카드) 충전 | `krw, local, rate, date` |
 | `exchanges` | 현금 환전 | `krw, local, rate, date` |
 | `atms` | ATM 인출(카드→현금) | `local, date, note` |
 | `refunds` | 카드 잔액 이전(카드→계좌) | `local, krw, date` |
-| `expenses` | **외화** 지출 | `name, amt, pay('트레블월렛'\|'현금'), date, note, participants[], split{mode,values}` |
+| `expenses` | **외화** 지출 | `name, amt, pay('트래블카드'\|'현금'\|'신용카드'), krwActual?, date, note, participants[], split{mode,values}` |
 | `krwExps` | **원화** 지출(계좌 직접 차감) | `name, amt, date, note, participants[], split{mode,values}` |
 
 - `participants` 없으면 전원, `split` 없으면 균등 — **구버전 데이터 호환 규칙이니 제거 금지.**
@@ -73,7 +74,11 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
    - 비율: 엔진은 **총 가중치로 정규화**하므로 합계가 90이어도 계산 자체는 맞다. 다만 30을 넣은 사람이 실제로는 33.3%를 물어 **입력값과 실제가 어긋나므로** 100%를 강제한다. 엔진(`settle.js`)은 손대지 않았다 — UI 제약일 뿐이라 기존에 저장된 데이터의 계산 결과는 그대로다.
    - 100% 강제로 잃는 "배수 입력"(2:1:1)은 **`normalizeRatio` + '100%로 맞추기' 버튼**으로 되살렸다. 비를 유지한 채 소수 둘째 자리까지 정규화하고 합계를 정확히 100.00으로 맞춘다(1:1:1 → 33.34/33.33/33.33). 비율 모드로 전환할 때도 이 함수로 균등 초기화해 곧바로 저장 가능한 상태로 둔다.
    - ※ 엔진에는 `shares`(배수) 모드가 남아 있으나 UI 미노출. 위 버튼이 그 역할을 대신한다.
-6. 정산 로직을 고쳤으면 **`node test-settle.mjs` 통과 필수**(현재 58/58).
+6. **신용카드 지출은 확정 원화(`krwActual`)가 있으면 그 금액이 기준.** 해외 신용카드는 원화 청구액이 3~5영업일 뒤 확정되므로, 여행 중에는 외화 금액만 넣고 평균환율로 추정하다가 확정되면 내역 수정에서 실제 청구액을 넣는다. 외화 `amt`는 항상 보존한다(통화 전환이 아니다).
+   - 환산은 `settle.js`의 `expenseKrw(exp, toKrw)` / `makeExpToKrw` 하나만 쓴다. 화면에서 `toKrw(e.amt)`를 직접 부르면 확정 원화가 무시돼 정산과 화면 숫자가 어긋난다.
+   - 고정액 분담도 실효 환율로 환산되므로 부담 합계는 확정 원화와 정확히 일치한다(회귀 테스트 21번).
+7. **결제수단이 차감처를 정한다**: 트래블카드→카드 외화 잔액 / 현금→현금 잔액 / **신용카드→계좌**. 잔액 코드에서 카드 지출을 고를 때 `pay !== PAY_CASH`만 보면 신용카드가 카드 잔액에서 빠지니 `&& pay !== PAY_CREDIT`까지 확인할 것. 결제수단이 빈 구버전 데이터는 카드 결제로 본다.
+8. 정산 로직을 고쳤으면 **`node test-settle.mjs` 통과 필수**(현재 67/67).
 
 ## 공유 구조 (2026-08-05 전면 교체)
 평문을 공개 저장하던 JSONBin 방식을 걷어내고 **암호화 + 서버**로 바꿨다.
@@ -86,6 +91,7 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 
 ## 설계 결정 (되돌리지 말 것)
 - **결제자(선결제·대납) 필드 없음.** 기능이 아니라 운영으로 처리: 돌려준 돈을 지출 1건으로 기록(이중차감 금지), 공금 부족 시 균등 회비 추가 징수 후 지급. 근거·가이드는 `docs/feedback-backlog.md`.
+- **결제수단 이름은 `constants.js`가 단일 출처**(`PAY_CARD='트래블카드'` · `PAY_CASH` · `PAY_CREDIT`). 2026-08-07에 브랜드명 '트레블월렛'을 걷어냈고, 저장된 옛 데이터는 `migrate.js`가 로드 시 변환한다(`PAY_CARD_LEGACY`). 화면에 결제수단 문자열을 직접 쓰지 말 것.
 - **국가·통화는 여행 생성 후 변경 불가** (정산 기준이 통째로 흔들림). SettingsScreen에서 읽기 전용 표시.
 - **참석자 추가 시 소급 여부를 묻는다**: '이후 지출부터' 선택 시 기존 '전원 균등' 지출을 옛 멤버로 고정(`MainScreen.handleTripSave`).
 - **회비·지출 내역이 있는 참석자는 삭제 불가**(SettingsScreen `memberHasData`).
@@ -104,7 +110,7 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ## 자주 쓰는 명령
 ```bash
 npx expo start          # 개발 서버. w=웹, 카메라앱으로 QR 스캔=실기기. --tunnel은 ngrok 장애 시 실패 가능
-node test-settle.mjs    # 정산 엔진 단위 테스트 (58개)
+node test-settle.mjs    # 정산 엔진 단위 테스트 (67개)
 cd server && wrangler deploy   # 공유 서버 배포 (Cloudflare 로그인 필요)
 eas build -p android --profile production   # versionCode 자동 증가 → .aab(45MB) 다운로드
 ```

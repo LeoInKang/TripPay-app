@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { migrateTripData } from './migrate';
 
 // 여행 데이터 -> JSON 문자열
 export function buildTripJson(data) {
@@ -78,7 +79,7 @@ export async function importTripFile() {
   if (!parsed || !parsed.trip) {
     throw new Error('INVALID');
   }
-  return {
+  return migrateTripData({
     trip: parsed.trip,
     deposits:  parsed.deposits  || [],
     charges:   parsed.charges   || [],
@@ -87,5 +88,5 @@ export async function importTripFile() {
     refunds:   parsed.refunds   || [],
     expenses:  parsed.expenses  || [],
     krwExps:   parsed.krwExps   || [],
-  };
+  });
 }

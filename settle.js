@@ -2,6 +2,7 @@
 // 순액 = 회비 − (참여한 지출의 내 몫)
 // 분담방식: equal(균등) | ratio(비율) | shares(배수) | fixed(고정액)
 // participants 없으면 전원, split 없으면 균등 (기존 데이터 호환)
+// 외화 지출의 원화 환산은 평균환율이 기준이나, 신용카드 건은 확정 원화(krwActual)가 있으면 그 값을 쓴다.
 
 // 여행 평균환율 — 회비·지출·잔액 환산의 유일한 기준.
 // 충전·환전 거래 rate의 단순 평균. 실거래가 하나도 없으면 국가 기본환율로 폴백한다.
@@ -70,6 +71,22 @@ export function makeToKrw(avgRate, r100) {
   return (v) => (avgRate > 0 ? Math.round((v * avgRate) / (r100 ? 100 : 1)) : 0);
 }
 
+// 한 외화 지출 전용 환산기.
+// 신용카드 결제는 원화 청구액이 며칠 뒤에 확정되므로, 확정 원화(krwActual)를 넣으면
+// 그 건만 실제 청구액 기준으로 환산한다(= 그 지출에만 적용되는 실효 환율).
+// 없으면 여행 평균환율(toKrw)로 추정한다. 외화 금액(amt)은 어느 쪽이든 그대로 보존된다.
+export function makeExpToKrw(exp, toKrw) {
+  const actual = Number(exp && exp.krwActual) || 0;
+  const amt = Number(exp && exp.amt) || 0;
+  if (actual > 0 && amt > 0) return (v) => Math.round((v * actual) / amt);
+  return toKrw;
+}
+
+// 외화 지출 1건의 원화 금액 (확정 원화 우선). 잔액·합계 표시가 정산과 같은 값을 쓰도록 공용.
+export function expenseKrw(exp, toKrw) {
+  return makeExpToKrw(exp, toKrw)(Number(exp && exp.amt) || 0);
+}
+
 // 한 지출에서 특정 멤버의 부담액(원화)
 export function shareOfKrw(exp, member, allMembers, toKrw, isFx) {
   const participants =
@@ -77,11 +94,12 @@ export function shareOfKrw(exp, member, allMembers, toKrw, isFx) {
   if (!participants.includes(member)) return 0;
 
   const split = exp.split || { mode: 'equal' };
-  const amtKrw = isFx ? toKrw(exp.amt) : exp.amt;
+  const conv = isFx ? makeExpToKrw(exp, toKrw) : toKrw;
+  const amtKrw = isFx ? conv(exp.amt) : exp.amt;
 
   if (split.mode === 'fixed') {
     const raw = (split.values && Number(split.values[member])) || 0;
-    return isFx ? toKrw(raw) : Math.round(raw);
+    return isFx ? conv(raw) : Math.round(raw);
   }
 
   if (split.mode === 'ratio' || split.mode === 'shares') {
@@ -126,7 +144,7 @@ export function computeSettlement({
   // 반올림 잔여는 특정인에게 몰리지 않도록 지출마다 순환 배정한다.
   let rotation = 0;
   const applyExp = (exp, isFx) => {
-    const amtKrw = isFx ? toKrw(exp.amt) : Math.round(exp.amt || 0);
+    const amtKrw = isFx ? expenseKrw(exp, toKrw) : Math.round(exp.amt || 0);
     const parts = (exp.participants && exp.participants.length)
       ? members.filter((m) => exp.participants.includes(m))
       : [...members];

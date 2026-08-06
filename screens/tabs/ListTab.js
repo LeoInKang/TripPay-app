@@ -6,7 +6,8 @@ import {
 import BottomSheet from '../../components/BottomSheet';
 import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
-import { PAY_METHODS } from '../../constants';
+import { PAY_METHODS, PAY_CREDIT } from '../../constants';
+import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
 
 // 정수 금액용 천단위 콤마 포맷
 function fmtInt(v) {
@@ -15,10 +16,12 @@ function fmtInt(v) {
   return parseInt(digits, 10).toLocaleString('ko-KR');
 }
 
-export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
+export default function ListTab({ trip, charges = [], exchanges = [], expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
   const [filterPay, setFilterPay]   = useState('all');
   const sym = trip.country.sym;
+  // 신용카드 건의 추정 원화를 보여주기 위한 환산 (settle.js 단일 출처)
+  const toKrw = makeToKrw(getAvgRate(trip, charges, exchanges), trip.country.r100);
 
   const allItems = [
     ...expenses.map(e => ({ ...e, type: 'fx' })),
@@ -89,9 +92,14 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
 
   const handleSaveEdit = (draft) => {
     if (draft.type === 'fx') {
-      setExpenses(expenses.map(e => e.id === draft.id
-        ? { ...e, name: draft.name, amt: draft.amt, pay: draft.pay, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split }
-        : e));
+      setExpenses(expenses.map(e => {
+        if (e.id !== draft.id) return e;
+        const next = { ...e, name: draft.name, amt: draft.amt, pay: draft.pay, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split };
+        // 확정 원화는 신용카드 건에만 남긴다. 비우거나 결제수단을 바꾸면 추정으로 되돌아간다.
+        if (draft.pay === PAY_CREDIT && draft.krwActual > 0) next.krwActual = draft.krwActual;
+        else delete next.krwActual;
+        return next;
+      }));
     } else {
       setKrwExps(krwExps.map(e => e.id === draft.id
         ? { ...e, name: draft.name, amt: draft.amt, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split }
@@ -177,17 +185,31 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
                       <Text style={styles.badgeKrwText}>원화</Text>
                     </View>
                   )}
+                  {item.type === 'fx' && item.pay === PAY_CREDIT && !(item.krwActual > 0) && (
+                    <View style={styles.badgeWait}>
+                      <Text style={styles.badgeWaitText}>확정대기</Text>
+                    </View>
+                  )}
                 </View>
                 <Text style={styles.sub}>
                   {item.date}{item.pay ? ' · ' + item.pay : ''}
                   {item.note ? ' · ' + item.note : ''}
                 </Text>
               </View>
-              <Text style={styles.amt}>
-                {item.type === 'fx'
-                  ? `${sym}${item.amt.toLocaleString('ko-KR')}`
-                  : `₩${item.amt.toLocaleString('ko-KR')}`}
-              </Text>
+              <View style={styles.amtBox}>
+                <Text style={styles.amt}>
+                  {item.type === 'fx'
+                    ? `${sym}${item.amt.toLocaleString('ko-KR')}`
+                    : `₩${item.amt.toLocaleString('ko-KR')}`}
+                </Text>
+                {item.type === 'fx' && item.pay === PAY_CREDIT && (
+                  <Text style={[styles.amtKrw, item.krwActual > 0 && styles.amtKrwFixed]}>
+                    {item.krwActual > 0
+                      ? `₩${item.krwActual.toLocaleString('ko-KR')} 확정`
+                      : `₩${expenseKrw(item, toKrw).toLocaleString('ko-KR')} 추정`}
+                  </Text>
+                )}
+              </View>
               {renderRowActions('i-' + item.type + '-' + item.id, item)}
             </View>
           ))
@@ -212,6 +234,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   const [pay, setPay]     = useState('');
   const [date, setDate]   = useState('');
   const [note, setNote]   = useState('');
+  const [krwActual, setKrwActual] = useState('');
   const [splitVal, setSplitVal] = useState(null);
 
   useEffect(() => {
@@ -221,6 +244,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
       setPay(item.pay || (payMethods[0] || ''));
       setDate(item.date || '');
       setNote(item.note || '');
+      setKrwActual(item.krwActual > 0 ? fmtInt(String(item.krwActual)) : '');
       setSplitVal(
         (item.participants || item.split)
           ? { participants: item.participants || members, split: item.split || { mode: 'equal', values: {} } }
@@ -247,6 +271,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
       name,
       amt: num,
       pay: isFx ? pay : undefined,
+      krwActual: isFx ? (parseInt((krwActual || '').replace(/,/g, '')) || 0) : 0,
       date,
       note,
       participants: splitVal ? splitVal.participants : undefined,
@@ -278,6 +303,22 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
                     </TouchableOpacity>
                   ))}
                 </View>
+              </>
+            )}
+
+            {isFx && pay === PAY_CREDIT && (
+              <>
+                <Text style={styles.label}>확정 원화 (선택)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="카드값 확정 후 실제 청구액"
+                  keyboardType="numeric"
+                  value={krwActual}
+                  onChangeText={v => setKrwActual(fmtInt(v))}
+                />
+                <Text style={styles.modalHint}>
+                  비워두면 평균환율로 추정해요. 넣으면 그 금액으로 정산돼요.
+                </Text>
               </>
             )}
 
@@ -367,6 +408,16 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   badgeKrwText: { fontSize: 9, color: '#0c447c', fontWeight: '600' },
+  badgeWait: {
+    backgroundColor: '#FAEEDA',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  badgeWaitText: { fontSize: 9, color: '#8a5a06', fontWeight: '700' },
+  amtBox: { alignItems: 'flex-end' },
+  amtKrw: { fontSize: 10, color: '#BA7517', fontWeight: '600', marginTop: 2 },
+  amtKrwFixed: { color: '#1D9E75' },
   badgePayer: {
     backgroundColor: '#f0f0f0',
     borderRadius: 4,
@@ -411,6 +462,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 14,
   },
+  modalHint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
     paddingHorizontal: 12, paddingVertical: 8,

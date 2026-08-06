@@ -366,7 +366,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
         {editing && <TouchableOpacity onPress={handleCancel} hitSlop={8}><Text style={styles.cancelEdit}>취소</Text></TouchableOpacity>}
       </View>
       <Text style={styles.helpText}>
-        트레블월렛 카드로 현지 ATM에서 현금 인출 시 사용합니다.{'\n'}
+        트래블카드 카드로 현지 ATM에서 현금 인출 시 사용합니다.{'\n'}
         카드 잔액이 줄고 현금 잔액이 늘어납니다 (환율 변환 없음).
       </Text>
       <View style={styles.formRow}>
@@ -457,7 +457,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) 
         {editing && <TouchableOpacity onPress={handleCancel} hitSlop={8}><Text style={styles.cancelEdit}>취소</Text></TouchableOpacity>}
       </View>
       <Text style={styles.helpText}>
-        트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.{'\n'}
+        트래블카드 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.{'\n'}
         카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
       </Text>
       <View style={styles.formRow}>

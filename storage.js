@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { migrateTripData } from './migrate';
 
 const KEY_INDEX   = 'trippay:trips';
 const KEY_CURRENT = 'trippay:currentTripId';
@@ -31,7 +32,9 @@ export async function loadTripData(tripId) {
   if (!tripId) return null;
   try {
     const raw = await AsyncStorage.getItem(tripKey(tripId));
-    return raw ? JSON.parse(raw) : null;
+    // 옛 스키마로 저장된 데이터도 여기서 현재 형태로 맞춰 내보낸다.
+    // (저장은 MainScreen의 자동저장이 하므로 변환분은 다음 저장 때 기록된다)
+    return raw ? migrateTripData(JSON.parse(raw)) : null;
   } catch (e) {
     console.warn('loadTripData failed', e);
     return null;

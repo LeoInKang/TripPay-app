@@ -89,6 +89,33 @@ export default function HelpScreen({ navigation }) {
           </Text>
         </Card>
 
+        <Card title="신용카드로 결제했을 때">
+          <Text style={styles.p}>
+            해외에서 신용카드로 결제하면 원화 청구액이 3~5영업일 뒤에 확정돼요.{'\n'}
+            환율이 결제 시점이 아니라 매입 시점에 정해지기 때문이에요.
+          </Text>
+
+          <Text style={styles.sectionHead}>입력 방법</Text>
+          <Text style={styles.p}>
+            여행 중에는 외화 금액만 입력하세요. 평균환율로 추정 계산됩니다.{'\n'}
+            카드값이 확정되면 그 지출을 수정해 <Text style={styles.b}>확정 원화</Text>에 실제 청구액을 넣으세요.{'\n'}
+            외화 금액은 그대로 남으니 기록이 사라지지 않아요.
+          </Text>
+
+          <Text style={styles.sectionHead}>확정 전 정산</Text>
+          <Text style={styles.p}>
+            급하면 추정 금액으로 1차 공유하고, 확정 후 수정해 최종 정산하세요.{'\n'}
+            내역에서 <Text style={styles.b}>확정대기</Text> 표시를 보면 수정할 건을 바로 찾을 수 있어요.
+          </Text>
+
+          <View style={styles.tipBox}>
+            <Text style={styles.tipText}>
+              트래블카드·현금은 결제 즉시 금액이 확정돼서 정산이 훨씬 빨라요.
+              신용카드는 꼭 필요한 곳에서만 쓰는 걸 권해요.
+            </Text>
+          </View>
+        </Card>
+
         <Card title="왜 이렇게 하면 되나요?">
           <Text style={styles.p}>
             정산은 <Text style={styles.b}>개인 순액 = 낸 돈 − 부담</Text>으로 계산돼요.{'\n'}

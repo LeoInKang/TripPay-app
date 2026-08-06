@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { RECEIPT_PROMPT, parseAiJson } from '../receiptPrompt';
+import { migrateTripData } from '../migrate';
 import { listTrips, loadTripData, saveTripData, setCurrentTripId } from '../storage';
 
 function notify(msg) {
@@ -44,7 +45,8 @@ export default function ImportAIScreen({ navigation, route }) {
   };
 
   const acceptText = (text) => {
-    const data = parseAiJson(text);
+    // AI가 옛 결제수단 이름을 쓸 수 있으므로 저장 데이터와 같은 변환을 거친다
+    const data = migrateTripData(parseAiJson(text));
     if (!data) {
       notify('붙여넣은 내용에서 TripPay 형식을 찾지 못했어요.\nAI가 준 결과(JSON 코드블록)를 복사했는지 확인해 주세요.');
       return;

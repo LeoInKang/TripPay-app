@@ -1,4 +1,4 @@
-import { computeSettlement, getAvgRate, checkFixedSplit, checkRatioSplit, normalizeRatio } from './settle.js';
+import { computeSettlement, getAvgRate, checkFixedSplit, checkRatioSplit, normalizeRatio, expenseKrw, makeToKrw } from './settle.js';
 
 let pass = 0, fail = 0;
 function eq(label, got, exp) {
@@ -249,6 +249,50 @@ eq('16 금액 미입력은 통과', checkFixedSplit({ participants: ['A'], split
       split: { mode: 'fixed', values: { A: 30000, B: 30000 } } }],
   });
   eq('20 원화 고정액은 그대로', krw.perMember.reduce((s, p) => s + p.owed, 0), 60000);
+}
+
+// 21) 신용카드 확정 원화(krwActual): 그 지출만 실제 청구액 기준으로 환산
+{
+  const RATE = 930;           // 100엔 = 930원
+  const conv = makeToKrw(RATE, true);
+  const parts = ['A', 'B'];
+  const est = conv(10000);    // 평균환율 추정액 93,000
+
+  // 확정 원화가 없으면 종전대로 평균환율 추정
+  const pending = computeSettlement({
+    members: parts, r100: true, avgRate: RATE,
+    expenses: [{ name: '호텔', amt: 10000, pay: '신용카드', participants: parts }],
+  });
+  eq('21 확정 전엔 평균환율 추정', pending.perMember.reduce((s, p) => s + p.owed, 0), est);
+
+  // 확정 원화가 있으면 그 금액이 부담 합계
+  const fixedRate = computeSettlement({
+    members: parts, r100: true, avgRate: RATE,
+    expenses: [{ name: '호텔', amt: 10000, pay: '신용카드', krwActual: 100000, participants: parts }],
+  });
+  eq('21 확정 원화가 부담 합계', fixedRate.perMember.reduce((s, p) => s + p.owed, 0), 100000);
+  eq('21 확정 원화 균등 A', netOf(fixedRate, 'A'), -50000);
+
+  // 확정 원화 + 고정액 분담: 외화로 넣은 고정액도 실효 환율로 환산되고 합계가 정확히 맞는다
+  const withFixed = computeSettlement({
+    members: parts, r100: true, avgRate: RATE,
+    expenses: [{ name: '호텔', amt: 10000, pay: '신용카드', krwActual: 100000, participants: parts,
+      split: { mode: 'fixed', values: { A: 6000, B: 4000 } } }],
+  });
+  eq('21 확정+고정액 합계', withFixed.perMember.reduce((s, p) => s + p.owed, 0), 100000);
+  eq('21 확정+고정액 A 부담', withFixed.perMember.find(p => p.name === 'A').owed, 60000);
+
+  // 값이 없거나 0이면 추정으로 폴백 (구버전 데이터 호환)
+  eq('21 krwActual 0은 추정', expenseKrw({ amt: 10000, krwActual: 0 }, conv), est);
+  eq('21 krwActual 없으면 추정', expenseKrw({ amt: 10000 }, conv), est);
+  eq('21 krwActual 있으면 그 값', expenseKrw({ amt: 10000, krwActual: 100000 }, conv), 100000);
+
+  // 원화 지출에는 영향 없음
+  const krwOnly = computeSettlement({
+    members: parts,
+    krwExps: [{ name: '원화', amt: 50000, krwActual: 999999, participants: parts }],
+  });
+  eq('21 원화 지출은 krwActual 무시', krwOnly.perMember.reduce((s, p) => s + p.owed, 0), 50000);
 }
 
 console.log(`\n== ${pass} passed, ${fail} failed ==`);

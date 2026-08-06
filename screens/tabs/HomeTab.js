@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { getAvgRate, makeToKrw } from '../../settle';
-import { PAY_CASH } from '../../constants';
+import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
+import { PAY_CASH, PAY_CREDIT } from '../../constants';
 
 export default function HomeTab({ trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
   const sym = trip.country.sym;
@@ -11,12 +11,17 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   const avgRate = getAvgRate(trip, charges, exchanges);
   const toKrw = makeToKrw(avgRate, r100);
 
-  // 카드 잔액 = 충전 - 카드결제 - ATM인출 - 카드잔액이전 (SettleTab과 동일)
+  // 카드(트래블카드) 잔액 = 충전 - 카드결제 - ATM인출 - 카드잔액이전 (SettleTab과 동일)
+  // 신용카드는 카드 잔액이 아니라 계좌에서 빠지므로 제외한다.
+  // 결제수단이 비어 있는 구버전 데이터는 종전대로 카드 결제로 본다.
   const cardCharged = charges.reduce((s,c) => s+c.local, 0);
-  const cardSpent   = expenses.filter(e => e.pay !== PAY_CASH).reduce((s,e) => s+e.amt, 0);
+  const cardSpent   = expenses.filter(e => e.pay !== PAY_CASH && e.pay !== PAY_CREDIT).reduce((s,e) => s+e.amt, 0);
   const cardRefund  = (refunds||[]).reduce((s,r) => s+(r.local||0), 0);
   const cardAtm     = (atms||[]).reduce((s,a) => s+(a.local||0), 0);
   const cardBal     = cardCharged - cardSpent - cardRefund - cardAtm;
+
+  // 신용카드 외화 결제는 계좌에서 빠진다 (확정 원화가 있으면 그 금액, 없으면 평균환율 추정)
+  const creditKrw = expenses.filter(e => e.pay === PAY_CREDIT).reduce((s,e) => s+expenseKrw(e, toKrw), 0);
 
   // 현금 잔액 = 환전합계 + ATM합계 + LOCAL 회비납부 - 현금결제합계
   const localDeposits = deposits.filter(d => d.cur === 'LOCAL').reduce((s,d) => s+(d.amt||0), 0);
@@ -33,12 +38,12 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   const totalExchanged = exchanges.reduce((s,e) => s+e.krw, 0);
   const totalKrwExp    = krwExps.reduce((s,e) => s+e.amt, 0);
   const refundKrw      = (refunds||[]).reduce((s,r) => s+(r.krw||0), 0);
-  const acctBal        = totalKrwDeposit - totalCharged - totalExchanged - totalKrwExp + refundKrw;
+  const acctBal        = totalKrwDeposit - totalCharged - totalExchanged - totalKrwExp - creditKrw + refundKrw;
 
   // 총 지출
   const totalFxAmt = expenses.reduce((s,e) => s+e.amt, 0);
   // 건별 환산 후 합 (참석자 부담 합계·정산 탭과 동일 기준)
-  const totalFxKrw = expenses.reduce((s,e) => s+toKrw(e.amt), 0);
+  const totalFxKrw = expenses.reduce((s,e) => s+expenseKrw(e, toKrw), 0);
 
   // 잔액 음수 경고
   const hasNegative = acctBal < 0 || cardBal < 0 || cashBal < 0;
@@ -64,7 +69,8 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
       {hasNegative && (
         <View style={styles.warnBanner}>
           <Text style={styles.warnText}>
-            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요. 입력 내역을 확인하세요.
+            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요.{'\n'}
+            자동충전 내역이 빠지지 않았는지 확인해 보세요.
           </Text>
         </View>
       )}
@@ -157,7 +163,7 @@ function _dotIcon(type) {
 }
 function _itemName(item) {
   if(item.type==='deposit')  return `${item.mem} 회비납부`;
-  if(item.type==='charge')   return '트레블월렛 충전';
+  if(item.type==='charge')   return '트래블카드 충전';
   if(item.type==='exchange') return '현금 환전';
   return item.name || '';
 }

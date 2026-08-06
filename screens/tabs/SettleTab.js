@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { shareTrip, revokeShare, SHARE_TTL_DAYS } from '../../share';
-import { computeSettlement, getAvgRate, makeToKrw } from '../../settle';
-import { PAY_CASH } from '../../constants';
+import { computeSettlement, getAvgRate, makeToKrw, expenseKrw } from '../../settle';
+import { PAY_CASH, PAY_CREDIT } from '../../constants';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -29,16 +29,23 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   // --- 총 지출 (원화환산) ---
   const totalFxAmt    = expenses.reduce((s, e) => s + e.amt, 0);
   // 건별 환산 합 (참석자 부담 합계와 동일 기준)
-  const totalFxKrw    = expenses.reduce((s, e) => s + toKrw(e.amt), 0);
+  const totalFxKrw    = expenses.reduce((s, e) => s + expenseKrw(e, toKrw), 0);
   const totalKrwExp   = krwExps.reduce((s, e) => s + e.amt, 0);
   const totalExpKrw   = totalFxKrw + totalKrwExp;
 
-  // --- 카드(트레블월렛) 잔액 ---
+  // --- 카드(트래블카드) 잔액 ---
+  // 신용카드는 카드 잔액이 아니라 계좌에서 빠지므로 제외한다.
+  // 결제수단이 비어 있는 구버전 데이터는 종전대로 카드 결제로 본다.
   const cardCharged = charges.reduce((s,c) => s+c.local, 0);
   const cardRefund  = (refunds||[]).reduce((s,r) => s+r.local, 0);
   const cardAtm     = (atms||[]).reduce((s,a) => s+a.local, 0);
-  const cardSpent   = expenses.filter(e => e.pay !== PAY_CASH).reduce((s,e) => s+e.amt, 0);
+  const cardSpent   = expenses.filter(e => e.pay !== PAY_CASH && e.pay !== PAY_CREDIT).reduce((s,e) => s+e.amt, 0);
   const cardBal     = cardCharged - cardSpent - cardRefund - cardAtm;
+
+  // --- 신용카드 (계좌 차감 · 확정 대기 안내용) ---
+  const creditExps  = expenses.filter(e => e.pay === PAY_CREDIT);
+  const creditKrw   = creditExps.reduce((s,e) => s+expenseKrw(e, toKrw), 0);
+  const pendingCnt  = creditExps.filter(e => !(e.krwActual > 0)).length;
 
   // --- 현금 잔액 ---
   const localDeps   = deposits.filter(d => d.cur === 'LOCAL').reduce((s,d) => s+(d.amt||0), 0);
@@ -51,7 +58,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   const totalChargedKrw = charges.reduce((s,c) => s+c.krw, 0);
   const totalExchangedKrw = exchanges.reduce((s,e) => s+e.krw, 0);
   const refundKrw     = (refunds||[]).reduce((s,r) => s+(r.krw||0), 0);
-  const acctBal       = totalKrwDep - totalChargedKrw - totalExchangedKrw - totalKrwExp + refundKrw;
+  const acctBal       = totalKrwDep - totalChargedKrw - totalExchangedKrw - totalKrwExp - creditKrw + refundKrw;
 
   const hasNegative = acctBal < 0 || cardBal < 0 || cashBal < 0;
 
@@ -147,7 +154,16 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
       {hasNegative && (
         <View style={styles.warnBanner}>
           <Text style={styles.warnText}>
-            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요. 입력 내역을 확인하세요.
+            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요.{'\n'}
+            자동충전 내역이 빠지지 않았는지 확인해 보세요.
+          </Text>
+        </View>
+      )}
+
+      {pendingCnt > 0 && (
+        <View style={styles.noticeBanner}>
+          <Text style={styles.noticeText}>
+            신용카드 {pendingCnt}건은 추정 금액이에요. 카드값 확정 후(3~5영업일) 확정 원화를 입력하면 정확해집니다.
           </Text>
         </View>
       )}
@@ -170,7 +186,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
           </View>
         </View>
 
-        {/* 2줄: 계좌 잔액 / 트레블월렛 잔액 */}
+        {/* 2줄: 계좌 잔액 / 트래블카드 잔액 */}
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>계좌 잔액</Text>
@@ -180,7 +196,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
             <Text style={styles.subPer}>인당 ₩{perAcct.toLocaleString('ko-KR')}</Text>
           </View>
           <View style={styles.subCard}>
-            <Text style={styles.subLabel}>트레블월렛 잔액</Text>
+            <Text style={styles.subLabel}>트래블카드 잔액</Text>
             <Text style={[styles.subValue, { color: cardBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
               {sym}{cardBal.toLocaleString('ko-KR')}
             </Text>
@@ -261,7 +277,9 @@ const styles = StyleSheet.create({
   content: { padding: 12, paddingBottom: 32 },
 
   warnBanner: { backgroundColor: '#fce4e4', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 0.5, borderColor: '#f0b8b8' },
-  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600', lineHeight: 16 },
+  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600', lineHeight: 17 },
+  noticeBanner: { backgroundColor: '#FAEEDA', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 0.5, borderColor: '#e8d3a8' },
+  noticeText: { fontSize: 12, color: '#633806', lineHeight: 17 },
 
   // 공유 버튼 (그라데이션 효과를 위해 배경색 적용)
   shareBtn: {

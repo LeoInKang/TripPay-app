@@ -16,6 +16,11 @@ function renamePay(list) {
   return changed ? next : list;
 }
 
+// 참석자가 하나도 없으면 넣는 기본값.
+// AI가 만든 JSON에는 참석자가 빠질 수 있는데, 화면 여러 곳이 trip.members를 무방비로 읽어
+// 비어 있으면 앱이 죽는다. 프롬프트로 막을 일이 아니라 여기서 채운다(사용자가 설정에서 고친다).
+const DEFAULT_MEMBERS = ['총무'];
+
 export function migrateTripData(data) {
   if (!data || typeof data !== 'object') return data;
 
@@ -25,6 +30,9 @@ export function migrateTripData(data) {
   let trip = data.trip;
   if (trip && Array.isArray(trip.payMethods) && trip.payMethods.includes(PAY_CARD_LEGACY)) {
     trip = { ...trip, payMethods: trip.payMethods.map((m) => (m === PAY_CARD_LEGACY ? PAY_CARD : m)) };
+  }
+  if (trip && (!Array.isArray(trip.members) || trip.members.length === 0)) {
+    trip = { ...trip, members: [...DEFAULT_MEMBERS] };
   }
 
   if (expenses === data.expenses && krwExps === data.krwExps && trip === data.trip) return data;

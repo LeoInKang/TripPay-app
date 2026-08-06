@@ -196,7 +196,7 @@ export default function MainScreen({ route, navigation }) {
           {formatDateRange()}{trip.note ? ' · ' + trip.note : ''}
         </Text>
         <Text style={styles.infoLine2}>
-          참석: {trip.members.join(', ')}
+          참석: {(trip.members || []).join(', ')}
         </Text>
       </View>
 

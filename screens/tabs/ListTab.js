@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
-  Modal, Pressable, Platform
+  Modal, Pressable, Platform, Dimensions
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
 import DateField   from '../../components/DateField';
@@ -47,6 +47,35 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
     }
     return true;
   });
+
+  // 방금 가져온 지출이 목록 아래쪽에 있으면 첫 하이라이트 항목이
+  // 화면 중간쯤 오도록 한 번만 자동 스크롤한다.
+  // 글자 줄바꿈으로 위 행들의 높이가 늦게 정해지면 초기 레이아웃의 y가 어긋나므로,
+  // 잠시 기다렸다가 스크롤 시점에 위치를 다시 잰다.
+  const scrollRef = useRef(null);
+  const highlightRowRef = useRef(null);
+  const autoScrolled = useRef(false);
+  const firstHighlight = filtered.find(i => highlightIds.includes(i.id));
+  useEffect(() => {
+    if (!firstHighlight || autoScrolled.current) return;
+    const t = setTimeout(() => {
+      const row = highlightRowRef.current, sc = scrollRef.current;
+      if (!row || !sc) return;
+      autoScrolled.current = true;
+      const isDom = typeof HTMLElement !== 'undefined' && sc instanceof HTMLElement;
+      const go = (y) => {
+        const top = Math.max(0, y - Dimensions.get('window').height * 0.3);
+        if (isDom) sc.scrollTop = top; // 웹: ref가 DOM 노드 (smooth scrollTo가 무시되는 환경이 있어 직접 대입)
+        else sc.scrollTo({ y: top, animated: true });
+      };
+      if (isDom && typeof row.offsetTop === 'number') {
+        go(row.offsetTop);
+      } else if (row.measureLayout && sc.getInnerViewNode) {
+        row.measureLayout(sc.getInnerViewNode(), (x, y) => go(y), () => {});
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [firstHighlight ? firstHighlight.id : null]);
 
   const handleDelete = (item) => {
     if (item.type === 'fx') {
@@ -119,7 +148,7 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
         </View>
       </View>
 
-      <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
+      <ScrollView ref={scrollRef} style={styles.list} contentContainerStyle={styles.listContent}>
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>지출 내역이 없어요</Text>
@@ -128,6 +157,7 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
           filtered.map(item => (
             <View
               key={item.id}
+              ref={firstHighlight && firstHighlight.id === item.id ? highlightRowRef : undefined}
               style={[
                 styles.row,
                 highlightIds.includes(item.id) && styles.rowNew,

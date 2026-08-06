@@ -27,8 +27,16 @@ export default function MainScreen({ route, navigation }) {
     initialAtms=[], initialRefunds=[], initialExpenses=[], initialKrwExps=[],
   } = route.params;
   const [activeTab, setActiveTab] = useState(route.params.initialTab || 'home');
-  // 영수증 가져오기 직후 새 지출을 표시하기 위한 일회성 값 (저장되지 않음)
-  const highlightIds = route.params.highlightIds || [];
+  // 영수증 가져오기 직후 새 지출을 표시하기 위한 일회성 값 (저장되지 않음).
+  // 내역 탭을 한 번 본 뒤 다른 탭으로 이동하면 해제된다.
+  const [highlightIds, setHighlightIds] = useState(route.params.highlightIds || []);
+  const prevTabRef = useRef(activeTab);
+  useEffect(() => {
+    if (prevTabRef.current === 'list' && activeTab !== 'list' && highlightIds.length) {
+      setHighlightIds([]);
+    }
+    prevTabRef.current = activeTab;
+  }, [activeTab]);
 
   const [trip,      setTrip]      = useState(initialTrip);
 

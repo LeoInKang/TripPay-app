@@ -28,6 +28,7 @@ screens/
   MainScreen         여행 상태 보관소 + 6탭 스위처 + 자동저장 트리거
   HistoryScreen      저장된 여행 목록 열기/삭제/JSON 내보내기
   SettingsScreen     여행명·기간·메모·참석자 편집 (국가·통화는 변경 불가) + 도움말 진입점
+  ImportAIScreen     AI 영수증 가져오기 — 프롬프트 복사 + 클립보드 붙여넣기 → 여행 선택·미리보기·병합
   HelpScreen         도움말 — 분담방식·대납 처리 (운영 규칙의 사용자용 요약. 규칙 바뀌면 feedback-backlog.md와 함께 수정)
   tabs/  Home 현황 | Deposit 회비 | Charge 충전·환전·ATM·잔액이전 | Add 지출입력 | List 내역·수정 | Settle 정산·공유
 components/          BottomSheet · Segment · DateField(월일) · FullDateField(연월일) · CountryPicker · SplitEditor

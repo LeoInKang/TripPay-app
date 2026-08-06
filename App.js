@@ -8,6 +8,7 @@ import MainScreen    from './screens/MainScreen';
 import HistoryScreen from './screens/HistoryScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import HelpScreen from './screens/HelpScreen';
+import ImportAIScreen from './screens/ImportAIScreen';
 import { getCurrentTripId, loadTripData } from './storage';
 import { importTripFile } from './transfer';
 import {
@@ -74,6 +75,9 @@ function LandingScreen({ navigation }) {
           <TouchableOpacity style={styles.btnPrimary} onPress={() => navigation.navigate('Setup')}>
             <Text style={styles.btnPrimaryText}>✈ 새로운 여행 시작</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.btnSecondary} onPress={() => navigation.navigate('ImportAI')}>
+            <Text style={styles.btnSecondaryText}>🧾 AI로 영수증 입력</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.btnSecondary} onPress={handleImport}>
             <Text style={styles.btnSecondaryText}>📂 여행 데이터 가져오기</Text>
           </TouchableOpacity>
@@ -139,6 +143,7 @@ export default function App() {
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Help" component={HelpScreen} />
+        <Stack.Screen name="ImportAI" component={ImportAIScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

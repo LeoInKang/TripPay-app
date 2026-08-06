@@ -50,29 +50,28 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
 
   // 방금 가져온 지출이 목록 아래쪽에 있으면 첫 하이라이트 항목이
   // 화면 중간쯤 오도록 한 번만 자동 스크롤한다.
-  // 글자 줄바꿈으로 위 행들의 높이가 늦게 정해지면 초기 레이아웃의 y가 어긋나므로,
-  // 잠시 기다렸다가 스크롤 시점에 위치를 다시 잰다.
+  // 글자 줄바꿈으로 위 행들의 위치가 늦게 정해질 수 있어 잠시 기다렸다가 스크롤한다.
+  // 위치 측정: 네이티브는 onLayout(위치 변화도 다시 알려줌), 웹은 onLayout이
+  // 위치 변화를 안 알려주므로 스크롤 시점에 DOM offsetTop을 읽는다.
   const scrollRef = useRef(null);
   const highlightRowRef = useRef(null);
+  const highlightY = useRef(null);
   const autoScrolled = useRef(false);
   const firstHighlight = filtered.find(i => highlightIds.includes(i.id));
+  const onHighlightLayout = (e) => { highlightY.current = e.nativeEvent.layout.y; };
   useEffect(() => {
     if (!firstHighlight || autoScrolled.current) return;
     const t = setTimeout(() => {
-      const row = highlightRowRef.current, sc = scrollRef.current;
-      if (!row || !sc) return;
+      const sc = scrollRef.current;
+      if (!sc) return;
+      const isWeb = Platform.OS === 'web';
+      const row = highlightRowRef.current;
+      const y = isWeb && row && typeof row.offsetTop === 'number' ? row.offsetTop : highlightY.current;
+      if (y == null) return;
       autoScrolled.current = true;
-      const isDom = typeof HTMLElement !== 'undefined' && sc instanceof HTMLElement;
-      const go = (y) => {
-        const top = Math.max(0, y - Dimensions.get('window').height * 0.3);
-        if (isDom) sc.scrollTop = top; // 웹: ref가 DOM 노드 (smooth scrollTo가 무시되는 환경이 있어 직접 대입)
-        else sc.scrollTo({ y: top, animated: true });
-      };
-      if (isDom && typeof row.offsetTop === 'number') {
-        go(row.offsetTop);
-      } else if (row.measureLayout && sc.getInnerViewNode) {
-        row.measureLayout(sc.getInnerViewNode(), (x, y) => go(y), () => {});
-      }
+      const top = Math.max(0, y - Dimensions.get('window').height * 0.3);
+      if (isWeb) sc.scrollTop = top; // 웹: ref가 DOM 노드 (smooth scrollTo가 무시되는 환경이 있어 직접 대입)
+      else sc.scrollTo({ y: top, animated: true });
     }, 400);
     return () => clearTimeout(t);
   }, [firstHighlight ? firstHighlight.id : null]);
@@ -158,6 +157,7 @@ export default function ListTab({ trip, expenses, krwExps, setExpenses, setKrwEx
             <View
               key={item.id}
               ref={firstHighlight && firstHighlight.id === item.id ? highlightRowRef : undefined}
+              onLayout={firstHighlight && firstHighlight.id === item.id ? onHighlightLayout : undefined}
               style={[
                 styles.row,
                 highlightIds.includes(item.id) && styles.rowNew,

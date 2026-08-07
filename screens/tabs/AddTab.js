@@ -93,10 +93,12 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
         ...(splitVal || {}),
       }]);
     } else {
+      // 원화 지출의 결제수단은 분류용이다 — 차감처는 언제나 계좌라 잔액·정산에는 쓰이지 않는다.
       setKrwExps([...krwExps, {
         id: Date.now(),
         name,
         amt: amtNum,
+        pay,
         date,
         note,
         ...(splitVal || {}),

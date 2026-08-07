@@ -93,20 +93,36 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
   // 수정 모달 상태
   const [editItem, setEditItem] = useState(null); // { ...item, type }
 
+  // 수정 저장. 통화가 바뀌면 지출을 반대쪽 목록으로 옮긴다
+  // (외화는 expenses, 원화는 krwExps — 저장 위치가 다르다).
   const handleSaveEdit = (draft) => {
-    if (draft.type === 'fx') {
-      setExpenses(expenses.map(e => {
-        if (e.id !== draft.id) return e;
-        const next = { ...e, name: draft.name, amt: draft.amt, pay: draft.pay, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split };
-        // 확정 원화는 신용카드 건에만 남긴다. 비우거나 결제수단을 바꾸면 추정으로 되돌아간다.
-        if (draft.pay === PAY_CREDIT && draft.krwActual > 0) next.krwActual = draft.krwActual;
-        else delete next.krwActual;
-        return next;
-      }));
+    const toFx = draft.newType === 'fx';
+
+    // 공통 필드. 결제수단은 원화에서도 분류용으로 보관하고, 확정 원화는 외화 신용카드에만 남긴다.
+    const build = (prev) => {
+      const next = {
+        ...prev,
+        name: draft.name, amt: draft.amt, pay: draft.pay,
+        date: draft.date, note: draft.note,
+        participants: draft.participants, split: draft.split,
+      };
+      if (toFx && draft.pay === PAY_CREDIT && draft.krwActual > 0) next.krwActual = draft.krwActual;
+      else delete next.krwActual;
+      delete next.type; // 목록으로 구분하므로 항목에는 담지 않는다
+      return next;
+    };
+
+    if (draft.type === draft.newType) {
+      if (toFx) setExpenses(expenses.map(e => (e.id === draft.id ? build(e) : e)));
+      else      setKrwExps(krwExps.map(e => (e.id === draft.id ? build(e) : e)));
+    } else if (toFx) {
+      const moved = build(krwExps.find(e => e.id === draft.id) || {});
+      setKrwExps(krwExps.filter(e => e.id !== draft.id));
+      setExpenses([...expenses, moved]);
     } else {
-      setKrwExps(krwExps.map(e => e.id === draft.id
-        ? { ...e, name: draft.name, amt: draft.amt, date: draft.date, note: draft.note, participants: draft.participants, split: draft.split }
-        : e));
+      const moved = build(expenses.find(e => e.id === draft.id) || {});
+      setExpenses(expenses.filter(e => e.id !== draft.id));
+      setKrwExps([...krwExps, moved]);
     }
     setEditItem(null);
   };
@@ -242,6 +258,9 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   const [name, setName]   = useState('');
   const [amt, setAmt]     = useState('');
   const [pay, setPay]     = useState('');
+  // 통화는 수정에서 바꿀 수 있다. 바꾸면 저장 시 지출이 반대쪽 목록으로 옮겨간다
+  // (외화는 expenses, 원화는 krwExps). 입력 기본값이 외화라 실수 여지가 있어 넣었다.
+  const [cur, setCur]     = useState('LOCAL');
   const [date, setDate]   = useState('');
   const [note, setNote]   = useState('');
   const [krwActual, setKrwActual] = useState('');
@@ -252,6 +271,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
       setName(item.name || '');
       setAmt(item.amt != null ? fmtInt(String(item.amt)) : '');
       setPay(item.pay || (payMethods[0] || ''));
+      setCur(item.type === 'fx' ? 'LOCAL' : 'KRW');
       setDate(item.date || '');
       setNote(item.note || '');
       setKrwActual(item.krwActual > 0 ? fmtInt(String(item.krwActual)) : '');
@@ -264,7 +284,8 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   }, [item]);
 
   if (!item) return null;
-  const isFx = item.type === 'fx';
+  const isFx = cur === 'LOCAL';           // 화면·검증 기준 (사용자가 바꾼 값)
+  const wasFx = item.type === 'fx';       // 원래 저장 위치
 
   const save = () => {
     if (!name) { notifyLocal('항목명을 입력해 주세요.'); return; }
@@ -277,10 +298,11 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
     if (splitErr) { notifyLocal(splitErr); return; }
     onSave({
       id: item.id,
-      type: item.type,
+      type: item.type,                       // 원래 목록
+      newType: isFx ? 'fx' : 'krw',          // 저장할 목록
       name,
       amt: num,
-      pay: isFx ? pay : undefined,
+      pay,                                   // 원화도 분류용으로 저장한다
       krwActual: isFx ? (parseInt((krwActual || '').replace(/,/g, '')) || 0) : 0,
       date,
       note,
@@ -314,25 +336,43 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
               </View>
             </View>
 
-            {/* 2줄: 금액 | 결제수단 */}
+            {/* 2줄: 통화 */}
+            <View style={styles.formRow}>
+              <View style={styles.col}>
+                <Segment
+                  label="통화"
+                  value={cur}
+                  options={[{ value: 'LOCAL', label: `외화 ${sym}` }, { value: 'KRW', label: '원화 ₩' }]}
+                  onChange={(v) => {
+                    if (v === cur) return;
+                    setCur(v);
+                    if (v === 'KRW') setKrwActual('');
+                    // 고정액은 금액 단위가 바뀌면 의미를 잃으므로 균등으로 되돌린다
+                    setSplitVal(prev => (prev && prev.split && prev.split.mode === 'fixed')
+                      ? { ...prev, split: { mode: 'equal', values: {} } }
+                      : prev);
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* 3줄: 금액 | 결제수단 (원화의 결제수단은 분류용 — 차감처는 언제나 계좌) */}
             <View style={styles.formRow}>
               <View style={styles.col}>
                 <Text style={styles.labelTop}>{isFx ? `금액(${sym})` : '금액(원화)'}</Text>
                 <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={amt} onChangeText={v => setAmt(fmtInt(v))} />
               </View>
-              {isFx && (
-                <View style={[styles.col, { flex: 1.6 }]}>
-                  <Segment
-                    label="결제수단"
-                    value={pay}
-                    options={payMethods.map(m => ({ value: m, label: m }))}
-                    onChange={setPay}
-                  />
-                </View>
-              )}
+              <View style={[styles.col, { flex: 1.6 }]}>
+                <Segment
+                  label="결제수단"
+                  value={pay}
+                  options={payMethods.map(m => ({ value: m, label: m }))}
+                  onChange={setPay}
+                />
+              </View>
             </View>
 
-            {/* 3줄: 확정 원화 (외화를 신용카드로 결제했을 때만) */}
+            {/* 4줄: 확정 원화 (외화를 신용카드로 결제했을 때만) */}
             {isFx && pay === PAY_CREDIT && (
               <View style={styles.formRow}>
                 <View style={styles.col}>
@@ -351,7 +391,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
               </View>
             )}
 
-            {/* 4줄: 메모 */}
+            {/* 5줄: 메모 */}
             <View style={styles.formRow}>
               <View style={styles.col}>
                 <Text style={styles.labelTop}>메모</Text>

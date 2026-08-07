@@ -54,16 +54,20 @@ export default function SetupScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 뒤로·제목은 스크롤 영역 밖에 둔다 — 안에 있으면 키보드가 뜰 때 함께 밀려 올라가 눌리지 않는다 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn} hitSlop={8}>
+          <Text style={styles.backText}>‹ 뒤로</Text>
+        </TouchableOpacity>
+        <Text style={styles.title}>새 여행 시작</Text>
+      </View>
+
       <KeyboardAvoider style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={true}
         >
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backText}>‹ 뒤로</Text>
-          </TouchableOpacity>
-          <Text style={styles.title}>새 여행 시작</Text>
 
           {/* 여행명 */}
           <View style={styles.field}>
@@ -132,9 +136,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f0',
     paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0,
   },
-  scroll: { padding: 20, paddingBottom: 120 },
-  title: { fontSize: 24, fontWeight: '800', color: '#1a3a5c', marginBottom: 24 },
-  backBtn: { marginBottom: 12 },
+  scroll: { padding: 20, paddingTop: 4, paddingBottom: 120 },
+  header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 4 },
+  title: { fontSize: 24, fontWeight: '800', color: '#1a3a5c', marginBottom: 8 },
+  backBtn: { marginBottom: 12, alignSelf: 'flex-start' },
   backText: { fontSize: 15, color: '#1a3a5c', fontWeight: '600' },
   field: { marginBottom: 16 },
   row: { flexDirection: 'row', marginBottom: 0 },

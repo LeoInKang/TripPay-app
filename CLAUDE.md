@@ -14,10 +14,12 @@ TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전
 - UI 언어는 **한국어 전용**. 통화 기준은 항상 **원화(KRW)**.
 
 ## 현재 상태 (2026-08-07 새벽 기준)
-- **v6(versionCode 6, 1.2.0) 비공개 테스트 트랙에 제출 완료 — Google 검토 중**(2026-08-07 새벽). 커밋 `fcd643e` 기준.
-  관리형 게시가 꺼져 있어 검토 통과 즉시 테스터에게 자동 배포된다. 검토는 보통 7일 이내.
-  `.aab` https://expo.dev/artifacts/eas/L-txRs_aWKIi0cS0nUgAla5LW8WftshCOcQfRLPsbTg.aab
+- **v7(versionCode 7, 1.2.1) 비공개 테스트 트랙에 제출 완료 — Google 검토 중**(2026-08-07 오후). 커밋 `2a26cab` 기준.
+  내용: 키보드·안전 영역 수정(아래 '키보드 처리' 참조) · 수정 모달 필드 순서 통일 · 회비/충전 수정 시 폼으로 자동 스크롤.
+  `.aab` https://expo.dev/artifacts/eas/CP_fS0m8AAsw11ZgRgQT2MSHVJsFhy6PSWPCRFtNXVw.aab
+- v6(versionCode 6, 1.2.0)는 배포 완료(2026-08-07 오전 7:33, 검토 몇 분 만에 통과). 테스터 20명.
   내용: AI 영수증 가져오기(클립보드) · 신용카드 결제수단 + 확정 원화 · 지출 폼 통합 · 참석자 이름 수정 · 도움말 화면 · 트래블카드 명칭 변경.
+  관리형 게시가 꺼져 있어 검토 통과 즉시 테스터에게 자동 배포된다.
 - v5(versionCode 5, 1.1.0)는 비공개 테스트 트랙 배포 완료(정산 정확도 + 암호화 공유). 실기기 검증도 끝남.
 - **데이터 보안 신고 수정 제출 완료**(수집·공유 예 / 이름·기타 금융 정보 / 전송 중 암호화 / 삭제 요청 가능).
 - Play 14일 요건: **8/10 전후 충족 예정**(8/5 시점 8일 경과 · 테스터 12명 유지).
@@ -101,6 +103,25 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 - **참석자 추가 시 소급 여부를 묻는다**: '이후 지출부터' 선택 시 기존 '전원 균등' 지출을 옛 멤버로 고정(`MainScreen.handleTripSave`).
 - **회비·지출 내역이 있는 참석자는 삭제 불가**(SettingsScreen `memberHasData`).
 - 외화 회비는 **수동 환율 입력 없이** 평균환율 자동 환산. 평균환율이 없으면(충전·환전 0건) 외화 회비 입력을 막는다.
+
+## 키보드 처리 (2026-08-07, 갤럭시 폴드 실측 후 확정)
+**Android 15(targetSdk 35)부터 엣지투엣지가 강제되어 `adjustResize`가 창을 줄이지 않는다.** OS는 키보드
+높이만 알려주고 대응은 앱 몫이다. 그래서 아무 처리도 안 하면 입력칸이 키보드에 덮인다.
+
+- **`softwareKeyboardLayoutMode: "pan"`은 쓰지 말 것.** 한 번 넣었다가 되돌렸다 — 창을 통째로 밀어
+  올리는 방식이라 상단 헤더와 뒤로 버튼이 화면 밖으로 나가고, 창 크기는 그대로라 스크롤뷰가 가려진
+  영역을 몰라 목록 끝까지 내려가지 않는다. 입력칸 하나 살리고 셋을 잃는다.
+- **`components/KeyboardAvoider.js` 하나만 쓴다.** 양쪽 플랫폼 모두 `behavior="padding"` —
+  창을 옮기지 않고 보이는 영역만 줄이므로 헤더 고정과 스크롤이 둘 다 살아 있다.
+  사용처: SetupScreen · MainScreen(탭 전체) · SettingsScreen · ListTab 수정 모달 · CountryPicker.
+- **Modal 안에는 반드시 Modal 내부에 둘 것.** Modal은 별도 뷰 계층이라 바깥 래퍼가 닿지 않는다.
+- **모든 ScrollView에 `keyboardShouldPersistTaps="handled"`.** 없으면 키보드가 떠 있을 때 터치가
+  '키보드 닫기'로 먹혀 안드로이드에서 스크롤 제스처가 씹힌다. `keyboardDismissMode`는 쓰지 않는다
+  (드래그로 키보드가 닫혀 불편하다는 피드백 — 빈 곳 탭으로만 닫히게 둔다).
+- **하단 버튼은 `useSafeAreaInsets()`로 여백을 잡는다.** `react-native-safe-area-context`가 설치만 되고
+  안 쓰이던 탓에 안드로이드 제스처 바에 버튼이 잘렸다. `App.js`에 `SafeAreaProvider`가 있어야 동작한다.
+- 미해결: 아이폰 국가 선택 모달에서 목록을 스크롤하면 키보드가 닫힌다. 웹에서 재현되지 않아 iOS
+  네이티브 거동으로 판단. `react-native-keyboard-controller` 도입 시 함께 검토.
 
 ## 알려진 부채·주의
 - **잔액 계산이 HomeTab·SettleTab에 아직 중복**(계좌/카드/현금 3종). 한쪽만 고치면 화면 간 숫자가 어긋난다 — 고칠 땐 양쪽 동시에, 여력 되면 avgRate처럼 공용 모듈로 추출.

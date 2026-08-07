@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert
@@ -43,9 +43,13 @@ export default function ChargeTab({
     return (r100 ? (k / l * 100) : (k / l)).toFixed(2);
   };
 
+  // 목록이 길어지면 아래로 스크롤한 상태에서 '수정'을 눌러도 상단 폼이 안 보인다.
+  // 수정 진입 시 폼 위치로 올려준다.
+  const scrollRef = useRef(null);
   const startEdit = (type, item) => {
     setEditTarget({ type, item });
     setSubTab(type);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
   };
   const clearEdit = () => setEditTarget(null);
   const editItemFor = (type) => (editTarget && editTarget.type === type ? editTarget.item : null);
@@ -74,7 +78,12 @@ export default function ChargeTab({
   );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* 서브 탭 */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.subTabScroll}>
         {SUB_TABS.map(t => (

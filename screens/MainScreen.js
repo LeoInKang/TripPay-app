@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   SafeAreaView, ScrollView, StatusBar, Platform
 } from 'react-native';
+import KeyboardAvoider from '../components/KeyboardAvoider';
 import HomeTab    from './tabs/HomeTab';
 import DepositTab from './tabs/DepositTab';
 import ChargeTab  from './tabs/ChargeTab';
@@ -221,8 +222,11 @@ export default function MainScreen({ route, navigation }) {
         ))}
       </ScrollView>
 
-      {/* 탭 컨텐츠 */}
-      <View style={styles.content}>{renderTab()}</View>
+      {/* 탭 컨텐츠 — 6개 탭이 모두 여기 들어가므로 키보드 회피도 한 곳에서 처리한다.
+          안드로이드는 behavior 없이 감싸기만 해도 입력칸이 가려지지 않는다(Expo 권장). */}
+      <KeyboardAvoider style={styles.content}>
+        {renderTab()}
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

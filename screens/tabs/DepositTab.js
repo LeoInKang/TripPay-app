@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, Platform, Alert
@@ -31,6 +31,10 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   const [date,     setDate]     = useState('');
   const [note,     setNote]     = useState('');
   const [editId,   setEditId]   = useState(null);
+  // 목록이 길어지면 아래로 스크롤한 상태에서 '수정'을 눌러도 상단 폼이 안 보인다.
+  // 수정 진입 시 폼 위치로 올려준다.
+  const scrollRef = useRef(null);
+  const scrollToForm = () => scrollRef.current?.scrollTo({ y: 0, animated: true });
 
   const sym  = trip.country.sym;
   const r100 = trip.country.r100;
@@ -91,6 +95,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
 
   const handleEdit = (d) => {
     setEditId(d.id);
+    scrollToForm();
     setMember(d.mem);
     setCurrency(d.cur);
     setAmount(d.amt != null ? fmtInt(String(d.amt)) : '');
@@ -131,7 +136,12 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   const localDeps = deposits.filter(d => d.cur === 'LOCAL');
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      ref={scrollRef}
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* 입력 폼 */}
       <View style={[styles.card, editId != null && styles.cardEditing]}>
         <View style={styles.titleRow}>

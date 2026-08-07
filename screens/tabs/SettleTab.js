@@ -128,7 +128,11 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {/* 공유 버튼 - 그라데이션 */}
       <TouchableOpacity style={styles.shareBtn} activeOpacity={0.85} onPress={handleShare} disabled={sharing}>
         <Text style={styles.shareBtnText}>

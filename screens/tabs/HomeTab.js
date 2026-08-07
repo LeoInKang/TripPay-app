@@ -65,7 +65,11 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
   });
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {hasNegative && (
         <View style={styles.warnBanner}>
           <Text style={styles.warnText}>

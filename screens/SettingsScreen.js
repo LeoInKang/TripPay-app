@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, SafeAreaView, Platform, Alert, StatusBar
 } from 'react-native';
+import KeyboardAvoider from '../components/KeyboardAvoider';
 import DateField from '../components/FullDateField';
 
 function notify(msg) {
@@ -138,6 +139,7 @@ export default function SettingsScreen({ route, navigation }) {
         <View style={styles.sideBtn} />
       </View>
 
+      <KeyboardAvoider style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.field}>
           <Text style={styles.label}>여행명</Text>
@@ -240,6 +242,7 @@ export default function SettingsScreen({ route, navigation }) {
           <Text style={styles.btnSaveText}>저장</Text>
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

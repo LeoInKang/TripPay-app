@@ -25,7 +25,11 @@ function fmtInt(v) {
 
 export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps, openImportAI }) {
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       {openImportAI && (
         <TouchableOpacity style={styles.aiBtn} onPress={openImportAI} activeOpacity={0.8}>
           <Text style={styles.aiBtnText}>🧾 AI로 영수증 입력</Text>

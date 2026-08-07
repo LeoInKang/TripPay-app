@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, SafeAreaView,
-  KeyboardAvoidingView, Platform, StatusBar
+  Platform, StatusBar
 } from 'react-native';
+import KeyboardAvoider from '../components/KeyboardAvoider';
 import FullDateField from '../components/FullDateField';
 import CountryPicker from '../components/CountryPicker';
 
@@ -53,15 +54,10 @@ export default function SetupScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-      >
+      <KeyboardAvoider style={{ flex: 1 }}>
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={true}
         >
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
@@ -125,7 +121,7 @@ export default function SetupScreen({ navigation }) {
             <Text style={styles.btnStartText}>✈ 여행 시작</Text>
           </TouchableOpacity>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoider>
     </SafeAreaView>
   );
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator, Platform, Alert } from 'react-native';
@@ -91,7 +92,7 @@ function LandingScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-        <Text style={styles.version}>TripPay v1.2</Text>
+        <Text style={styles.version}>TripPay v1.2.1</Text>
       </View>
     </SafeAreaView>
   );
@@ -135,6 +136,7 @@ export default function App() {
   } : undefined;
 
   return (
+    <SafeAreaProvider>
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={resume ? 'Main' : 'Landing'}>
         <Stack.Screen name="Landing" component={LandingScreen} />
@@ -146,6 +148,7 @@ export default function App() {
         <Stack.Screen name="ImportAI" component={ImportAIScreen} />
       </Stack.Navigator>
     </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
 

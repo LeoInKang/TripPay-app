@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView,
   Modal, Pressable, Platform, Dimensions
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
+import Segment     from '../../components/Segment';
+import KeyboardAvoider from '../../components/KeyboardAvoider';
 import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
@@ -155,7 +158,12 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
         </View>
       </View>
 
-      <ScrollView ref={scrollRef} style={styles.list} contentContainerStyle={styles.listContent}>
+      <ScrollView
+        ref={scrollRef}
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
+        keyboardShouldPersistTaps="handled"
+      >
         {filtered.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>지출 내역이 없어요</Text>
@@ -229,6 +237,8 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
 }
 
 function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
+  // 안드로이드 제스처 바에 하단 버튼이 먹히지 않도록 실제 시스템 바 높이를 반영한다
+  const insets = useSafeAreaInsets();
   const [name, setName]   = useState('');
   const [amt, setAmt]     = useState('');
   const [pay, setPay]     = useState('');
@@ -281,57 +291,75 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
 
   return (
     <Modal visible transparent animationType="slide" onRequestClose={onClose}>
+      {/* Modal은 부모와 별도의 뷰 계층에 그려지므로 바깥(MainScreen)의 KeyboardAvoidingView가
+          닿지 않는다. 키보드가 입력칸을 덮지 않도록 모달 안에서 다시 감싼다.
+          iOS는 padding으로 밀어 올리고, 안드로이드는 app.json의 pan 모드가 창을 옮긴다. */}
+      <KeyboardAvoider style={{ flex: 1 }}>
       <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={() => {}}>
+        <Pressable style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) + 8 }]} onPress={() => {}}>
           <View style={styles.handle} />
-          <Text style={styles.sheetTitle}>{isFx ? '외화 지출 수정' : '원화 지출 수정'}</Text>
+          <Text style={styles.sheetTitle}>지출 수정</Text>
 
-          <ScrollView style={{ maxHeight: 460 }} keyboardShouldPersistTaps="handled">
-            <Text style={styles.label}>항목명</Text>
-            <TextInput style={styles.input} placeholder="항목명" value={name} onChangeText={setName} />
+          {/* 입력 폼(AddTab)과 같은 순서·같은 컨트롤로 맞춘다.
+              통화만 없다 — 외화는 expenses, 원화는 krwExps로 저장 위치가 갈려 수정에서 바꿀 수 없다. */}
+          <ScrollView style={{ flexShrink: 1 }} keyboardShouldPersistTaps="handled">
+            {/* 1줄: 날짜 | 항목명 */}
+            <View style={styles.formRow}>
+              <View style={[styles.col, { flex: 0.48 }]}>
+                <DateField label="날짜" value={date} onChange={setDate} />
+              </View>
+              <View style={styles.col}>
+                <Text style={styles.labelTop}>항목명</Text>
+                <TextInput style={styles.input} placeholder="항목명" value={name} onChangeText={setName} />
+              </View>
+            </View>
 
-            <Text style={styles.label}>{isFx ? `금액(${sym})` : '금액(원화)'}</Text>
-            <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={amt} onChangeText={v => setAmt(fmtInt(v))} />
-
-            {isFx && (
-              <>
-                <Text style={styles.label}>결제수단</Text>
-                <View style={styles.chipRow}>
-                  {payMethods.map(m => (
-                    <TouchableOpacity key={m} style={[styles.chip, pay === m && styles.chipSel]} onPress={() => setPay(m)}>
-                      <Text style={[styles.chipText, pay === m && styles.chipTextSel]}>{m}</Text>
-                    </TouchableOpacity>
-                  ))}
+            {/* 2줄: 금액 | 결제수단 */}
+            <View style={styles.formRow}>
+              <View style={styles.col}>
+                <Text style={styles.labelTop}>{isFx ? `금액(${sym})` : '금액(원화)'}</Text>
+                <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={amt} onChangeText={v => setAmt(fmtInt(v))} />
+              </View>
+              {isFx && (
+                <View style={[styles.col, { flex: 1.6 }]}>
+                  <Segment
+                    label="결제수단"
+                    value={pay}
+                    options={payMethods.map(m => ({ value: m, label: m }))}
+                    onChange={setPay}
+                  />
                 </View>
-              </>
-            )}
+              )}
+            </View>
 
+            {/* 3줄: 확정 원화 (외화를 신용카드로 결제했을 때만) */}
             {isFx && pay === PAY_CREDIT && (
-              <>
-                <Text style={styles.label}>확정 원화 (선택)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="카드값 확정 후 실제 청구액"
-                  keyboardType="numeric"
-                  value={krwActual}
-                  onChangeText={v => setKrwActual(fmtInt(v))}
-                />
-                <Text style={styles.modalHint}>
-                  비워두면 평균환율로 추정해요. 넣으면 그 금액으로 정산돼요.
-                </Text>
-              </>
+              <View style={styles.formRow}>
+                <View style={styles.col}>
+                  <Text style={styles.labelTop}>확정 원화 (선택)</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="카드값 확정 후 실제 청구액"
+                    keyboardType="numeric"
+                    value={krwActual}
+                    onChangeText={v => setKrwActual(fmtInt(v))}
+                  />
+                  <Text style={styles.modalHint}>
+                    비워두면 평균환율로 추정해요. 넣으면 그 금액으로 정산돼요.
+                  </Text>
+                </View>
+              </View>
             )}
 
-            <View style={{ marginTop: 10 }}>
-              <DateField label="날짜" value={date} onChange={setDate} />
+            {/* 4줄: 메모 */}
+            <View style={styles.formRow}>
+              <View style={styles.col}>
+                <Text style={styles.labelTop}>메모</Text>
+                <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
+              </View>
             </View>
 
-            <Text style={styles.label}>메모</Text>
-            <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
-
-            <View style={{ marginTop: 10 }}>
-              <SplitEditor members={members} value={splitVal} onChange={setSplitVal} sym={isFx ? sym : '₩'} amount={parseFloat((amt || '').replace(/,/g, '')) || 0} />
-            </View>
+            <SplitEditor members={members} value={splitVal} onChange={setSplitVal} sym={isFx ? sym : '₩'} amount={parseFloat((amt || '').replace(/,/g, '')) || 0} />
           </ScrollView>
 
           <View style={styles.btnRow}>
@@ -344,6 +372,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
           </View>
         </Pressable>
       </Pressable>
+      </KeyboardAvoider>
     </Modal>
   );
 }
@@ -446,7 +475,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    // paddingBottom은 sheet 렌더 시 안전 영역 값으로 덮어쓴다
     paddingHorizontal: 16,
     maxHeight: '88%',
   },
@@ -463,6 +492,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   modalHint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: 4 },
+  formRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  col: { flex: 1 },
+  labelTop: { fontSize: 11, fontWeight: '600', color: '#6b6b6b', marginBottom: 4 },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   chip: {
     paddingHorizontal: 12, paddingVertical: 8,

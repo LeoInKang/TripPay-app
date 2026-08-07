@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Modal, Pressable, ScrollView, Platform
 } from 'react-native';
+import KeyboardAvoider from './KeyboardAvoider';
 import { COUNTRIES, POPULAR_CODES, REGIONS, searchCountries } from '../countries';
 
 // 검색 + 자주 가는 국가 + 지역별 그룹 바텀시트
@@ -33,6 +34,8 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+        {/* 검색창이 키보드에 가리지 않도록 모달 안에서 감싼다 (Modal은 별도 뷰 계층) */}
+        <KeyboardAvoider style={{ flex: 1 }}>
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.handle} />
@@ -54,7 +57,7 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
               )}
             </View>
 
-            <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+            <ScrollView style={styles.list} keyboardShouldPersistTaps="always">
               {!searching && (
                 <>
                   <Text style={styles.groupLabel}>자주 가는 국가</Text>
@@ -100,6 +103,7 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
             </ScrollView>
           </Pressable>
         </Pressable>
+        </KeyboardAvoider>
       </Modal>
     </View>
   );

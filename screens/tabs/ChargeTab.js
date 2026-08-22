@@ -4,6 +4,7 @@ import {
   StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import DateField from '../../components/DateField';
+import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -13,11 +14,46 @@ function notify(msg) {
   }
 }
 
-// 정수 금액용 천단위 콤마 포맷
-function fmtInt(v) {
-  const digits = (v || '').toString().replace(/[^0-9]/g, '');
-  if (!digits) return '';
-  return parseInt(digits, 10).toLocaleString('ko-KR');
+// 원화·외화·환율 셋 중 둘을 알면 나머지 하나를 채운다.
+// recent = 사용자가 마지막에 건드린 두 칸. 그 둘은 그대로 두고 남은 하나만 계산한다.
+// r100 통화는 환율이 100단위 고시라 환산에서 /100·×100이 붙는다.
+function fillFxTriple({ krw, local, rate }, recent, r100) {
+  const target = ['krw', 'local', 'rate'].find(f => !recent.includes(f));
+  if (!target) return null;
+  const k = toNum(krw), l = toNum(local), r = toNum(rate);
+
+  if (target === 'rate')  return (k && l) ? { rate:  ((r100 ? k * 100 : k) / l).toFixed(2) } : null;
+  if (target === 'krw')   return (l && r) ? { krw:   fmtInt(String(Math.round(r100 ? l * r / 100 : l * r))) } : null;
+  return (k && r) ? { local: fmtDec(trimDec((r100 ? k * 100 : k) / r)) } : null;
+}
+
+// 원화·외화·환율 세 칸을 함께 다루는 폼 상태. 카드충전·현금환전·카드잔액이전이 공유한다.
+function useFxTriple(r100) {
+  const [krw, setKrw]     = useState('');
+  const [local, setLocal] = useState('');
+  const [rate, setRate]   = useState('');
+  const recent = useRef([]);
+  const setters = { krw: setKrw, local: setLocal, rate: setRate };
+
+  // 한 칸을 입력하면 그 칸과 직전에 건드린 칸을 기준으로 나머지 하나를 채운다.
+  const edit = (field, raw) => {
+    const shown = field === 'krw' ? fmtInt(raw) : field === 'local' ? fmtDec(raw) : decOnly(raw);
+    setters[field](shown);
+    recent.current = [field, ...recent.current.filter(f => f !== field)].slice(0, 2);
+    const filled = fillFxTriple({ krw, local, rate, [field]: shown }, recent.current, r100);
+    if (filled) {
+      const [f, v] = Object.entries(filled)[0];
+      setters[f](v);
+    }
+  };
+
+  // 수정 진입·초기화: 계산 없이 값만 세운다. 직후 한 칸을 고치면 남은 둘 중 하나가 다시 계산된다.
+  const load = (v = {}) => {
+    setKrw(v.krw || ''); setLocal(v.local || ''); setRate(v.rate || '');
+    recent.current = [];
+  };
+
+  return { krw, local, rate, edit, load, reset: () => load() };
 }
 
 const SUB_TABS = [
@@ -35,13 +71,6 @@ export default function ChargeTab({
   const [editTarget, setEditTarget] = useState(null); // { type, item }
   const sym = trip.country.sym;
   const r100 = trip.country.r100;
-
-  const calcRate = (krw, local) => {
-    const k = parseInt((krw || '').replace(/,/g, '')) || 0;
-    const l = parseInt((local || '').replace(/,/g, '')) || 0;
-    if (!k || !l) return '';
-    return (r100 ? (k / l * 100) : (k / l)).toFixed(2);
-  };
 
   // 목록이 길어지면 아래로 스크롤한 상태에서 '수정'을 눌러도 상단 폼이 안 보인다.
   // 수정 진입 시 폼 위치로 올려준다.
@@ -101,8 +130,8 @@ export default function ChargeTab({
         ))}
       </ScrollView>
 
-      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, sym, r100, calcRate, editItem: editItemFor('charge'), onDone: clearEdit }} />}
-      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, sym, r100, calcRate, editItem: editItemFor('exchange'), onDone: clearEdit }} />}
+      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, sym, r100, editItem: editItemFor('charge'), onDone: clearEdit }} />}
+      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, sym, r100, editItem: editItemFor('exchange'), onDone: clearEdit }} />}
       {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, sym, editItem: editItemFor('atm'), onDone: clearEdit }} />}
       {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, sym, r100, editItem: editItemFor('refund'), onDone: clearEdit }} />}
 
@@ -170,30 +199,29 @@ export default function ChargeTab({
   );
 }
 
-function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, onDone }) {
+function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) {
   const rateHint = trip.country.exRate
     ? `예: ${trip.country.exRate} (${r100 ? '100' : '1'}${sym} = ${trip.country.exRate}원)`
     : '환율';
-  const [krw, setKrw] = useState('');
-  const [local, setLocal] = useState('');
-  const [rate, setRate] = useState('');
+  const fx = useFxTriple(r100);
+  const { krw, local, rate } = fx;
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
   const editing = !!editItem;
 
   useEffect(() => {
     if (editItem) {
-      setKrw(editItem.krw != null ? fmtInt(String(editItem.krw)) : '');
-      setLocal(editItem.local != null ? fmtInt(String(editItem.local)) : '');
-      setRate(editItem.rate != null ? String(editItem.rate) : '');
+      fx.load({
+        krw:   editItem.krw   != null ? fmtInt(String(editItem.krw))   : '',
+        local: editItem.local != null ? fmtDec(String(editItem.local)) : '',
+        rate:  editItem.rate  != null ? String(editItem.rate)          : '',
+      });
       setDate(editItem.date || '');
       setNote(editItem.note || '');
     }
   }, [editItem]);
 
-  const reset = () => { setKrw(''); setLocal(''); setRate(''); setDate(''); setNote(''); };
-  const handleKrw = (v) => { setKrw(fmtInt(v)); const r = calcRate(v, local); if (r) setRate(r); };
-  const handleLocal = (v) => { setLocal(fmtInt(v)); const r = calcRate(krw, v); if (r) setRate(r); };
+  const reset = () => { fx.reset(); setDate(''); setNote(''); };
 
   const handleSubmit = () => {
     if (!krw)   return notify('원화(계좌차감) 금액을 입력해 주세요.');
@@ -201,9 +229,9 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, 
     if (!rate)  return notify('환율을 입력해 주세요.');
     if (!date)  return notify('날짜를 선택해 주세요.');
     const payload = {
-      krw: parseInt(krw.replace(/,/g, '')),
-      local: parseInt(local.replace(/,/g, '')),
-      rate: parseFloat(rate) || 0,
+      krw: Math.round(toNum(krw)),
+      local: toNum(local),
+      rate: toNum(rate),
       date, note,
     };
     if (editing) {
@@ -225,17 +253,17 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, 
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>원화(계좌차감)</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={v => fx.edit('krw', v)} />
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>외화</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
+          <TextInput style={styles.input} placeholder="0" keyboardType="decimal-pad" value={local} onChangeText={v => fx.edit('local', v)} />
         </View>
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>환율 ({trip.country.r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
-          <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+          <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -247,6 +275,9 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, calcRate, editItem, 
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
+      <Text style={styles.helpText}>
+        원화·외화·환율 중 둘만 넣으면 나머지 하나는 자동으로 채워집니다.
+      </Text>
       <TouchableOpacity style={styles.addBtn} onPress={handleSubmit} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>{editing ? '수정 저장' : '+ 충전'}</Text>
       </TouchableOpacity>
@@ -258,26 +289,25 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
   const rateHint = trip.country.exRate
     ? `예: ${trip.country.exRate} (${r100 ? '100' : '1'}${sym} = ${trip.country.exRate}원)`
     : '환율';
-  const [krw, setKrw] = useState('');
-  const [local, setLocal] = useState('');
-  const [rate, setRate] = useState('');
+  const fx = useFxTriple(r100);
+  const { krw, local, rate } = fx;
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
   const editing = !!editItem;
 
   useEffect(() => {
     if (editItem) {
-      setKrw(editItem.krw != null ? fmtInt(String(editItem.krw)) : '');
-      setLocal(editItem.local != null ? fmtInt(String(editItem.local)) : '');
-      setRate(editItem.rate != null ? String(editItem.rate) : '');
+      fx.load({
+        krw:   editItem.krw   != null ? fmtInt(String(editItem.krw))   : '',
+        local: editItem.local != null ? fmtDec(String(editItem.local)) : '',
+        rate:  editItem.rate  != null ? String(editItem.rate)          : '',
+      });
       setDate(editItem.date || '');
       setNote(editItem.note || '');
     }
   }, [editItem]);
 
-  const reset = () => { setKrw(''); setLocal(''); setRate(''); setDate(''); setNote(''); };
-  const handleKrw = (v) => { setKrw(fmtInt(v)); const r = calcRate(v, local); if (r) setRate(r); };
-  const handleLocal = (v) => { setLocal(fmtInt(v)); const r = calcRate(krw, v); if (r) setRate(r); };
+  const reset = () => { fx.reset(); setDate(''); setNote(''); };
 
   const handleSubmit = () => {
     if (!krw)   return notify('원화(계좌차감) 금액을 입력해 주세요.');
@@ -285,9 +315,9 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
     if (!rate)  return notify('환율을 입력해 주세요.');
     if (!date)  return notify('날짜를 선택해 주세요.');
     const payload = {
-      krw: parseInt(krw.replace(/,/g, '')),
-      local: parseInt(local.replace(/,/g, '')),
-      rate: parseFloat(rate) || 0,
+      krw: Math.round(toNum(krw)),
+      local: toNum(local),
+      rate: toNum(rate),
       date, note,
     };
     if (editing) {
@@ -309,17 +339,17 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>원화(계좌차감)</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={v => fx.edit('krw', v)} />
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>외화</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
+          <TextInput style={styles.input} placeholder="0" keyboardType="decimal-pad" value={local} onChangeText={v => fx.edit('local', v)} />
         </View>
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>환율 ({trip.country.r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
-          <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={setRate} />
+          <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -331,6 +361,9 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
+      <Text style={styles.helpText}>
+        원화·외화·환율 중 둘만 넣으면 나머지 하나는 자동으로 채워집니다.
+      </Text>
       <TouchableOpacity style={styles.addBtn} onPress={handleSubmit} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>{editing ? '수정 저장' : '+ 환전'}</Text>
       </TouchableOpacity>
@@ -346,7 +379,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
 
   useEffect(() => {
     if (editItem) {
-      setLocal(editItem.local != null ? fmtInt(String(editItem.local)) : '');
+      setLocal(editItem.local != null ? fmtDec(String(editItem.local)) : '');
       setDate(editItem.date || '');
       setNote(editItem.note || '');
     }
@@ -357,7 +390,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
   const handleSubmit = () => {
     if (!local) return notify('인출 외화 금액을 입력해 주세요.');
     if (!date)  return notify('날짜를 선택해 주세요.');
-    const payload = { local: parseInt(local.replace(/,/g, '')), date, note };
+    const payload = { local: toNum(local), date, note };
     if (editing) {
       setAtms(atms.map(x => x.id === editItem.id ? { ...x, ...payload } : x));
       onDone();
@@ -381,7 +414,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>인출 외화 금액</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={v => setLocal(fmtInt(v))} />
+          <TextInput style={styles.input} placeholder="0" keyboardType="decimal-pad" value={local} onChangeText={v => setLocal(fmtDec(v))} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -401,52 +434,34 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
 }
 
 function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) {
-  const [local, setLocal] = useState('');
-  const [krw, setKrw] = useState('');
-  const [rate, setRate] = useState('');
+  const fx = useFxTriple(r100);
+  const { krw, local, rate } = fx;
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
   const editing = !!editItem;
 
   useEffect(() => {
     if (editItem) {
-      setLocal(editItem.local != null ? fmtInt(String(editItem.local)) : '');
-      setKrw(editItem.krw != null ? fmtInt(String(editItem.krw)) : '');
-      setRate(editItem.rate != null ? String(editItem.rate) : '');
+      fx.load({
+        krw:   editItem.krw   != null ? fmtInt(String(editItem.krw))   : '',
+        local: editItem.local != null ? fmtDec(String(editItem.local)) : '',
+        rate:  editItem.rate  != null ? String(editItem.rate)          : '',
+      });
       setDate(editItem.date || '');
       setNote(editItem.note || '');
     }
   }, [editItem]);
 
-  const reset = () => { setLocal(''); setKrw(''); setRate(''); setDate(''); setNote(''); };
-
-  const handleLocal = (v) => {
-    setLocal(fmtInt(v));
-    const l = parseInt(v.replace(/,/g, '')) || 0;
-    const k = parseInt(krw.replace(/,/g, '')) || 0;
-    if (l && k) setRate((r100 ? k/l*100 : k/l).toFixed(2));
-  };
-  const handleKrw = (v) => {
-    setKrw(fmtInt(v));
-    const l = parseInt(local.replace(/,/g, '')) || 0;
-    const k = parseInt(v.replace(/,/g, '')) || 0;
-    if (l && k) setRate((r100 ? k/l*100 : k/l).toFixed(2));
-  };
-  const handleRate = (v) => {
-    setRate(v);
-    const l = parseInt(local.replace(/,/g, '')) || 0;
-    const r = parseFloat(v) || 0;
-    if (l && r) setKrw(Math.round(r100 ? l*r/100 : l*r).toLocaleString('ko-KR'));
-  };
+  const reset = () => { fx.reset(); setDate(''); setNote(''); };
 
   const handleSubmit = () => {
     if (!local) return notify('카드 외화 잔액을 입력해 주세요.');
     if (!krw)   return notify('원화 환급액을 입력해 주세요.');
     if (!date)  return notify('날짜를 선택해 주세요.');
     const payload = {
-      local: parseInt(local.replace(/,/g, '')),
-      krw: parseInt(krw.replace(/,/g, '')),
-      rate: parseFloat(rate) || 0,
+      local: toNum(local),
+      krw: Math.round(toNum(krw)),
+      rate: toNum(rate),
       date, note,
     };
     if (editing) {
@@ -472,17 +487,17 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) 
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>이전 외화 금액</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={local} onChangeText={handleLocal} />
+          <TextInput style={styles.input} placeholder="0" keyboardType="decimal-pad" value={local} onChangeText={v => fx.edit('local', v)} />
         </View>
         <View style={styles.col}>
-          <Text style={styles.label}>반환 원화(직접입력)</Text>
-          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={handleKrw} />
+          <Text style={styles.label}>반환 원화</Text>
+          <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={krw} onChangeText={v => fx.edit('krw', v)} />
         </View>
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>환율(자동계산)</Text>
-          <TextInput style={styles.input} placeholder="자동" keyboardType="decimal-pad" value={rate} onChangeText={handleRate} />
+          <Text style={styles.label}>환율</Text>
+          <TextInput style={styles.input} placeholder="자동" keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
           <DateField label="날짜" value={date} onChange={setDate} />
@@ -494,6 +509,9 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) 
           <TextInput style={styles.input} placeholder="선택" value={note} onChangeText={setNote} />
         </View>
       </View>
+      <Text style={styles.helpText}>
+        외화·원화·환율 중 둘만 넣으면 나머지 하나는 자동으로 채워집니다.
+      </Text>
       <TouchableOpacity style={styles.addBtn} onPress={handleSubmit} activeOpacity={0.8}>
         <Text style={styles.addBtnText}>{editing ? '수정 저장' : '+ 카드 잔액 이전'}</Text>
       </TouchableOpacity>

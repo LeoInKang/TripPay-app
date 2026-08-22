@@ -7,6 +7,7 @@ import Segment     from '../../components/Segment';
 import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
+import { fmtInt, fmtDec, toNum } from '../../format';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -14,13 +15,6 @@ function notify(msg) {
   } else {
     Alert.alert('알림', msg);
   }
-}
-
-// 정수 금액용 천단위 콤마 포맷 (숫자만 남기고 콤마 삽입)
-function fmtInt(v) {
-  const digits = (v || '').toString().replace(/[^0-9]/g, '');
-  if (!digits) return '';
-  return parseInt(digits, 10).toLocaleString('ko-KR');
 }
 
 export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps, openImportAI }) {
@@ -67,6 +61,13 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   // 확정 원화는 외화를 신용카드로 결제했을 때만 의미가 있다 (원화 지출은 이미 원화)
   const showKrwActual = isFx && pay === PAY_CREDIT;
 
+  // 통화를 바꾸면 금액 표기 규칙도 바뀐다. 원화는 정수뿐이라 소수점은 반올림해 정리한다.
+  const handleCurChange = (c) => {
+    setCur(c);
+    const n = toNum(amt);
+    if (n) setAmt(c === 'LOCAL' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
+  };
+
   const curOptions = [
     { value: 'LOCAL', label: `외화 ${fxSym}` },
     { value: 'KRW',   label: '원화 ₩' },
@@ -81,7 +82,7 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
     if (splitErr) return notify(splitErr);
 
     if (isFx) {
-      const actual = parseInt((krwActual || '').replace(/,/g, '')) || 0;
+      const actual = Math.round(toNum(krwActual));
       setExpenses([...expenses, {
         id: Date.now(),
         name,
@@ -130,7 +131,7 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
       {/* 2줄: 통화 */}
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Segment label="통화" value={cur} options={curOptions} onChange={setCur} />
+          <Segment label="통화" value={cur} options={curOptions} onChange={handleCurChange} />
         </View>
       </View>
 
@@ -141,9 +142,9 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
           <TextInput
             style={styles.input}
             placeholder="0"
-            keyboardType="numeric"
+            keyboardType={isFx ? 'decimal-pad' : 'numeric'}
             value={amt}
-            onChangeText={v => setAmt(fmtInt(v))}
+            onChangeText={v => setAmt(isFx ? fmtDec(v) : fmtInt(v))}
           />
         </View>
         <View style={[styles.col, { flex: 1.6 }]}>

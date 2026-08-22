@@ -7,6 +7,7 @@ import BottomSheet from '../../components/BottomSheet';
 import Segment     from '../../components/Segment';
 import DateField   from '../../components/DateField';
 import { getAvgRate, makeToKrw } from '../../settle';
+import { fmtInt, fmtDec, toNum } from '../../format';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -14,13 +15,6 @@ function notify(msg) {
   } else {
     Alert.alert('알림', msg);
   }
-}
-
-// 정수 금액용 천단위 콤마 포맷
-function fmtInt(v) {
-  const digits = (v || '').toString().replace(/[^0-9]/g, '');
-  if (!digits) return '';
-  return parseInt(digits, 10).toLocaleString('ko-KR');
 }
 
 export default function DepositTab({ trip, deposits, setDeposits, charges = [], exchanges = [] }) {
@@ -50,13 +44,16 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   ];
 
   const handleAmtChange = (v) => {
-    setAmount(fmtInt(v));
-    const n = parseInt(v.replace(/,/g, '')) || 0;
-    setKrwEquiv(currency === 'LOCAL' && n ? toKrwLocal(n).toLocaleString('ko-KR') : '');
+    const isFx = currency === 'LOCAL';
+    setAmount(isFx ? fmtDec(v) : fmtInt(v));
+    const n = toNum(v);
+    setKrwEquiv(isFx && n ? toKrwLocal(n).toLocaleString('ko-KR') : '');
   };
+  // 통화를 바꾸면 금액 표기 규칙도 바뀐다. 원화는 정수뿐이라 소수점은 반올림해 정리한다.
   const handleCurrencyChange = (c) => {
     setCurrency(c);
-    const n = parseInt((amount || '').replace(/,/g, '')) || 0;
+    const n = toNum(amount);
+    if (n) setAmount(c === 'LOCAL' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
     setKrwEquiv(c === 'LOCAL' && n ? toKrwLocal(n).toLocaleString('ko-KR') : '');
   };
 
@@ -74,7 +71,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
       return notify('평균환율이 아직 없어요. 충전/환전을 먼저 입력하거나 원화로 납부해 주세요.');
     }
     if (!date) return notify('날짜를 선택해 주세요.');
-    const a = parseInt(amount.replace(/,/g, '')) || 0;
+    const a = currency === 'LOCAL' ? toNum(amount) : Math.round(toNum(amount));
     const k = currency === 'KRW' ? a : toKrwLocal(a);
     const payload = {
       mem: member,
@@ -98,7 +95,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
     scrollToForm();
     setMember(d.mem);
     setCurrency(d.cur);
-    setAmount(d.amt != null ? fmtInt(String(d.amt)) : '');
+    setAmount(d.amt != null ? (d.cur === 'LOCAL' ? fmtDec(String(d.amt)) : fmtInt(String(d.amt))) : '');
     setKrwEquiv(d.cur === 'LOCAL' ? toKrwLocal(d.amt || 0).toLocaleString('ko-KR') : '');
     setDate(d.date || '');
     setNote(d.note || '');
@@ -177,7 +174,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
             <TextInput
               style={styles.input}
               placeholder="0"
-              keyboardType="numeric"
+              keyboardType={currency === 'LOCAL' ? 'decimal-pad' : 'numeric'}
               value={amount}
               onChangeText={handleAmtChange}
             />

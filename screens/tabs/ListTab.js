@@ -11,13 +11,7 @@ import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
-
-// 정수 금액용 천단위 콤마 포맷
-function fmtInt(v) {
-  const digits = (v || '').toString().replace(/[^0-9]/g, '');
-  if (!digits) return '';
-  return parseInt(digits, 10).toLocaleString('ko-KR');
-}
+import { fmtInt, fmtDec, toNum } from '../../format';
 
 export default function ListTab({ trip, charges = [], exchanges = [], expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
@@ -269,7 +263,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   useEffect(() => {
     if (item) {
       setName(item.name || '');
-      setAmt(item.amt != null ? fmtInt(String(item.amt)) : '');
+      setAmt(item.amt != null ? (item.type === 'fx' ? fmtDec(String(item.amt)) : fmtInt(String(item.amt))) : '');
       setPay(item.pay || (payMethods[0] || ''));
       setCur(item.type === 'fx' ? 'LOCAL' : 'KRW');
       setDate(item.date || '');
@@ -291,9 +285,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
     if (!name) { notifyLocal('항목명을 입력해 주세요.'); return; }
     if (!amt)  { notifyLocal('금액을 입력해 주세요.'); return; }
     if (!date) { notifyLocal('날짜를 선택해 주세요.'); return; }
-    const num = isFx
-      ? parseFloat(amt.replace(/,/g, ''))
-      : parseInt(amt.replace(/,/g, ''));
+    const num = isFx ? toNum(amt) : Math.round(toNum(amt));
     const splitErr = splitErrorMessage(splitVal, num, isFx ? sym : '₩');
     if (splitErr) { notifyLocal(splitErr); return; }
     onSave({
@@ -303,7 +295,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
       name,
       amt: num,
       pay,                                   // 원화도 분류용으로 저장한다
-      krwActual: isFx ? (parseInt((krwActual || '').replace(/,/g, '')) || 0) : 0,
+      krwActual: isFx ? Math.round(toNum(krwActual)) : 0,
       date,
       note,
       participants: splitVal ? splitVal.participants : undefined,
@@ -347,6 +339,9 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
                     if (v === cur) return;
                     setCur(v);
                     if (v === 'KRW') setKrwActual('');
+                    // 원화는 정수뿐이라 소수점은 반올림해 정리한다
+                    const n = toNum(amt);
+                    if (n) setAmt(v === 'LOCAL' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
                     // 고정액은 금액 단위가 바뀌면 의미를 잃으므로 균등으로 되돌린다
                     setSplitVal(prev => (prev && prev.split && prev.split.mode === 'fixed')
                       ? { ...prev, split: { mode: 'equal', values: {} } }
@@ -360,7 +355,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
             <View style={styles.formRow}>
               <View style={styles.col}>
                 <Text style={styles.labelTop}>{isFx ? `금액(${sym})` : '금액(원화)'}</Text>
-                <TextInput style={styles.input} placeholder="0" keyboardType="numeric" value={amt} onChangeText={v => setAmt(fmtInt(v))} />
+                <TextInput style={styles.input} placeholder="0" keyboardType={isFx ? 'decimal-pad' : 'numeric'} value={amt} onChangeText={v => setAmt(isFx ? fmtDec(v) : fmtInt(v))} />
               </View>
               <View style={[styles.col, { flex: 1.6 }]}>
                 <Segment
@@ -399,7 +394,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
               </View>
             </View>
 
-            <SplitEditor members={members} value={splitVal} onChange={setSplitVal} sym={isFx ? sym : '₩'} amount={parseFloat((amt || '').replace(/,/g, '')) || 0} />
+            <SplitEditor members={members} value={splitVal} onChange={setSplitVal} sym={isFx ? sym : '₩'} amount={toNum(amt)} />
           </ScrollView>
 
           <View style={styles.btnRow}>

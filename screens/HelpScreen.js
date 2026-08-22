@@ -116,6 +116,37 @@ export default function HelpScreen({ navigation }) {
           </View>
         </Card>
 
+        <Card title="결제할 때마다 자동충전되는 카드">
+          <Text style={styles.p}>
+            미리 충전해 두지 않고 결제할 때마다 필요한 만큼 자동으로 충전되는 카드가 있어요.{'\n'}
+            이런 카드도 <Text style={styles.b}>충전은 충전대로, 결제는 결제대로</Text> 따로 적으면 됩니다.
+          </Text>
+
+          <Text style={styles.sectionHead}>입력 방법</Text>
+          <Text style={styles.p}>
+            1. 충전 탭에서 자동충전 건을 그대로 입력하세요. 카드 앱에 뜨는{' '}
+            <Text style={styles.b}>충전환율</Text>을 넣으면 됩니다.{'\n'}
+            2. 결제는 지출 입력에서 <Text style={styles.b}>트래블카드</Text>로 적으세요.
+          </Text>
+          <Text style={styles.p}>
+            원화·외화·환율 중 둘만 넣으면 나머지 하나는 자동으로 계산돼요.{'\n'}
+            카드 앱에 외화와 충전환율만 보인다면 그 둘만 넣으면 됩니다.
+          </Text>
+
+          <Text style={styles.sectionHead}>잔돈이 남는 이유</Text>
+          <Text style={styles.p}>
+            충전은 보통 딱 떨어지는 단위인데 결제는 소수점까지 있어서 카드에 잔돈이 남아요.{'\n'}
+            이 잔액은 사라지지 않고 <Text style={styles.b}>남은 공금</Text>으로 정산에 반영됩니다.
+          </Text>
+
+          <View style={styles.tipBox}>
+            <Text style={styles.tipText}>
+              같은 날 충전환율이 같다면 여러 건을 하나로 합쳐 적어도 결과는 같아요.
+              환율이 다른 날짜끼리는 합치지 마세요 — 평균환율이 틀어집니다.
+            </Text>
+          </View>
+        </Card>
+
         <Card title="왜 이렇게 하면 되나요?">
           <Text style={styles.p}>
             정산은 <Text style={styles.b}>개인 순액 = 낸 돈 − 부담</Text>으로 계산돼요.{'\n'}

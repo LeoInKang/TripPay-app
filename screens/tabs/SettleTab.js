@@ -184,10 +184,11 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>계좌 잔액</Text>
+            {/* 계좌는 원화뿐이라 '0원'으로 적는다 (현황 탭과 같은 모양) */}
             <Text style={[styles.subValue, { color: acctBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
-              ₩{acctBal.toLocaleString('ko-KR')}
+              {acctBal.toLocaleString('ko-KR')}원
             </Text>
-            <Text style={styles.subPer}>인당 ₩{perAcct.toLocaleString('ko-KR')}</Text>
+            <Text style={styles.subPer}>인당 {perAcct.toLocaleString('ko-KR')}원</Text>
           </View>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>트래블카드 잔액</Text>

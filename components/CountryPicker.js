@@ -4,7 +4,7 @@ import {
   Modal, Pressable, ScrollView, Platform
 } from 'react-native';
 import KeyboardAvoider from './KeyboardAvoider';
-import { COUNTRIES, POPULAR_CODES, REGIONS, searchCountries } from '../countries';
+import { COUNTRIES, REGIONS, searchCountries } from '../countries';
 
 // 검색 + 자주 가는 국가 + 지역별 그룹 바텀시트
 export default function CountryPicker({
@@ -26,10 +26,6 @@ export default function CountryPicker({
 
   const results = searchCountries(q);
   const searching = q.trim().length > 0;
-  const popular = POPULAR_CODES
-    .map(code => COUNTRIES.find(c => c.code === code))
-    .filter(Boolean);
-
   const pick = (c) => {
     if (!multi) { onChange(c); close(); return; }
     onChange(isOn(c) ? picked.filter(x => keyOf(x) !== keyOf(c)) : [...picked, c]);
@@ -76,25 +72,6 @@ export default function CountryPicker({
             </View>
 
             <ScrollView style={styles.list} keyboardShouldPersistTaps="always">
-              {!searching && (
-                <>
-                  <Text style={styles.groupLabel}>자주 가는 국가</Text>
-                  <View style={styles.chips}>
-                    {popular.map(c => (
-                      <TouchableOpacity
-                        key={'p-' + c.code}
-                        style={[styles.chip, isOn(c) && styles.chipOn]}
-                        onPress={() => pick(c)}
-                      >
-                        <Text style={[styles.chipText, isOn(c) && styles.chipTextOn]}>
-                          {c.flag} {c.name}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </>
-              )}
-
               {searching ? (
                 results.length === 0 ? (
                   <Text style={styles.empty}>검색 결과가 없어요</Text>
@@ -186,15 +163,6 @@ const styles = StyleSheet.create({
 
   list: { maxHeight: 460 },
   groupLabel: { fontSize: 11, color: '#9b9b9b', fontWeight: '600', marginTop: 10, marginBottom: 6 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
-  chip: {
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', backgroundColor: '#fff',
-  },
-  chipOn: { backgroundColor: '#e6f1fb', borderColor: '#378ADD' },
-  chipText: { fontSize: 13, color: '#6b6b6b', fontWeight: '500' },
-  chipTextOn: { color: '#0c447c', fontWeight: '700' },
-
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 11, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',

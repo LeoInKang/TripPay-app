@@ -73,7 +73,6 @@ export const COUNTRIES = [
 ];
 
 // 자주 가는 국가 (선택 화면 상단 고정)
-export const POPULAR_CODES = ['JPY', 'VND', 'THB', 'USD', 'EUR', 'PHP'];
 
 // 이름·코드·기호에 더해 별칭(aliases)까지 본다.
 // 유로존 20개국은 통화가 같아 EUR 한 줄로 묶여 있는데, 사용자는 '이탈리아'처럼 나라 이름으로 찾는다.

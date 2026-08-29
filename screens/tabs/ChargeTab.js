@@ -4,7 +4,9 @@ import {
   StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import DateField from '../../components/DateField';
+import Segment from '../../components/Segment';
 import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
+import { tripCurrencies, primaryCode, codeOfRecord } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -12,6 +14,40 @@ function notify(msg) {
   } else {
     Alert.alert('알림', msg);
   }
+}
+
+// 폼의 통화 상태. 통화가 하나뿐이면 선택 UI를 숨기고 주 통화를 그대로 쓴다.
+function useFormCurrency(trip) {
+  const list = tripCurrencies(trip);
+  const home = primaryCode(trip);
+  const [cur, setCur] = useState(home);
+  const obj = list.find(c => c.code === cur) || list[0] || {};
+  return {
+    cur, setCur, home,
+    list,
+    multi: list.length > 1,
+    sym: obj.sym || '',
+    r100: !!obj.r100,
+    exRate: obj.exRate,
+    // 주 통화면 필드를 두지 않는다 — 저장 모양이 구버전과 같아진다
+    field: cur !== home ? { cur } : {},
+  };
+}
+
+function CurrencyPick({ c }) {
+  if (!c.multi) return null;
+  return (
+    <View style={styles.formRow}>
+      <View style={styles.col}>
+        <Segment
+          label="통화"
+          value={c.cur}
+          options={c.list.map(x => ({ value: x.code, label: `${x.code} ${x.sym}` }))}
+          onChange={c.setCur}
+        />
+      </View>
+    </View>
+  );
 }
 
 // 원화·외화·환율 셋 중 둘을 알면 나머지 하나를 채운다.
@@ -69,8 +105,12 @@ export default function ChargeTab({
 }) {
   const [subTab, setSubTab] = useState('charge');
   const [editTarget, setEditTarget] = useState(null); // { type, item }
-  const sym = trip.country.sym;
-  const r100 = trip.country.r100;
+
+  // 내역 한 줄은 그 건의 통화로 표시한다 (cur 없으면 주 통화)
+  const curList = tripCurrencies(trip);
+  const curOf = (item) => curList.find(x => x.code === codeOfRecord(item, trip)) || curList[0] || {};
+  const symOf  = (item) => curOf(item).sym || '';
+  const r100Of = (item) => !!curOf(item).r100;
 
   // 목록이 길어지면 아래로 스크롤한 상태에서 '수정'을 눌러도 상단 폼이 안 보인다.
   // 수정 진입 시 폼 위치로 올려준다.
@@ -130,10 +170,10 @@ export default function ChargeTab({
         ))}
       </ScrollView>
 
-      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, sym, r100, editItem: editItemFor('charge'), onDone: clearEdit }} />}
-      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, sym, r100, editItem: editItemFor('exchange'), onDone: clearEdit }} />}
-      {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, sym, editItem: editItemFor('atm'), onDone: clearEdit }} />}
-      {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, sym, r100, editItem: editItemFor('refund'), onDone: clearEdit }} />}
+      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, editItem: editItemFor('charge'), onDone: clearEdit }} />}
+      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, editItem: editItemFor('exchange'), onDone: clearEdit }} />}
+      {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, editItem: editItemFor('atm'), onDone: clearEdit }} />}
+      {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, editItem: editItemFor('refund'), onDone: clearEdit }} />}
 
       {/* 전체 내역 */}
       <View style={styles.card}>
@@ -148,10 +188,10 @@ export default function ChargeTab({
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>카드 충전</Text>
                   <Text style={styles.itemSub}>
-                    {c.date} · ₩{c.krw.toLocaleString('ko-KR')} → {sym}{c.local.toLocaleString('ko-KR')} · 환율 {r100 ? '100' : '1'}{sym}={c.rate}원
+                    {c.date} · ₩{c.krw.toLocaleString('ko-KR')} → {symOf(c)}{c.local.toLocaleString('ko-KR')} · 환율 {r100Of(c) ? '100' : '1'}{symOf(c)}={c.rate}원
                   </Text>
                 </View>
-                <Text style={styles.itemAmt}>{sym}{c.local.toLocaleString('ko-KR')}</Text>
+                <Text style={styles.itemAmt}>{symOf(c)}{c.local.toLocaleString('ko-KR')}</Text>
                 {renderRowActions('c-' + c.id, () => startEdit('charge', c), () => { setCharges(charges.filter(x => x.id !== c.id)); if(editTarget&&editTarget.item.id===c.id) clearEdit(); })}
               </View>
             ))}
@@ -161,10 +201,10 @@ export default function ChargeTab({
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>현금 환전</Text>
                   <Text style={styles.itemSub}>
-                    {e.date} · ₩{e.krw.toLocaleString('ko-KR')} → {sym}{e.local.toLocaleString('ko-KR')} · 환율 {r100 ? '100' : '1'}{sym}={e.rate}원
+                    {e.date} · ₩{e.krw.toLocaleString('ko-KR')} → {symOf(e)}{e.local.toLocaleString('ko-KR')} · 환율 {r100Of(e) ? '100' : '1'}{symOf(e)}={e.rate}원
                   </Text>
                 </View>
-                <Text style={styles.itemAmt}>{sym}{e.local.toLocaleString('ko-KR')}</Text>
+                <Text style={styles.itemAmt}>{symOf(e)}{e.local.toLocaleString('ko-KR')}</Text>
                 {renderRowActions('e-' + e.id, () => startEdit('exchange', e), () => { setExchanges(exchanges.filter(x => x.id !== e.id)); if(editTarget&&editTarget.item.id===e.id) clearEdit(); })}
               </View>
             ))}
@@ -175,7 +215,7 @@ export default function ChargeTab({
                   <Text style={styles.itemName}>ATM 인출</Text>
                   <Text style={styles.itemSub}>{a.date}{a.note ? ' · ' + a.note : ''}</Text>
                 </View>
-                <Text style={styles.itemAmt}>{sym}{a.local.toLocaleString('ko-KR')}</Text>
+                <Text style={styles.itemAmt}>{symOf(a)}{a.local.toLocaleString('ko-KR')}</Text>
                 {renderRowActions('a-' + a.id, () => startEdit('atm', a), () => { setAtms(atms.filter(x => x.id !== a.id)); if(editTarget&&editTarget.item.id===a.id) clearEdit(); })}
               </View>
             ))}
@@ -185,7 +225,7 @@ export default function ChargeTab({
                 <View style={styles.itemInfo}>
                   <Text style={styles.itemName}>카드 잔액 이전</Text>
                   <Text style={styles.itemSub}>
-                    {r.date} · {sym}{r.local.toLocaleString('ko-KR')} → ₩{(r.krw||0).toLocaleString('ko-KR')}
+                    {r.date} · {symOf(r)}{r.local.toLocaleString('ko-KR')} → ₩{(r.krw||0).toLocaleString('ko-KR')}
                   </Text>
                 </View>
                 <Text style={styles.itemAmt}>+₩{(r.krw||0).toLocaleString('ko-KR')}</Text>
@@ -199,9 +239,11 @@ export default function ChargeTab({
   );
 }
 
-function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) {
-  const rateHint = trip.country.exRate
-    ? `예: ${trip.country.exRate} (${r100 ? '100' : '1'}${sym} = ${trip.country.exRate}원)`
+function ChargeForm({ trip, charges, setCharges, editItem, onDone }) {
+  const c = useFormCurrency(trip);
+  const { sym, r100 } = c;
+  const rateHint = c.exRate
+    ? `예: ${c.exRate} (${r100 ? '100' : '1'}${sym} = ${c.exRate}원)`
     : '환율';
   const fx = useFxTriple(r100);
   const { krw, local, rate } = fx;
@@ -211,6 +253,7 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) 
 
   useEffect(() => {
     if (editItem) {
+      c.setCur(codeOfRecord(editItem, trip));
       fx.load({
         krw:   editItem.krw   != null ? fmtInt(String(editItem.krw))   : '',
         local: editItem.local != null ? fmtDec(String(editItem.local)) : '',
@@ -232,7 +275,7 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) 
       krw: Math.round(toNum(krw)),
       local: toNum(local),
       rate: toNum(rate),
-      date, note,
+      date, note, ...c.field,
     };
     if (editing) {
       setCharges(charges.map(x => x.id === editItem.id ? { ...x, ...payload } : x));
@@ -250,6 +293,7 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) 
         <Text style={styles.cardTitle}>{editing ? '카드 충전 수정' : '카드 충전 (계좌→카드)'}</Text>
         {editing && <TouchableOpacity onPress={handleCancel} hitSlop={8}><Text style={styles.cancelEdit}>취소</Text></TouchableOpacity>}
       </View>
+      <CurrencyPick c={c} />
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>원화(계좌차감)</Text>
@@ -262,7 +306,7 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) 
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>환율 ({trip.country.r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
+          <Text style={styles.label}>환율 ({r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
           <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
@@ -285,9 +329,11 @@ function ChargeForm({ trip, charges, setCharges, sym, r100, editItem, onDone }) 
   );
 }
 
-function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, editItem, onDone }) {
-  const rateHint = trip.country.exRate
-    ? `예: ${trip.country.exRate} (${r100 ? '100' : '1'}${sym} = ${trip.country.exRate}원)`
+function ExchangeForm({ trip, exchanges, setExchanges, editItem, onDone }) {
+  const c = useFormCurrency(trip);
+  const { sym, r100 } = c;
+  const rateHint = c.exRate
+    ? `예: ${c.exRate} (${r100 ? '100' : '1'}${sym} = ${c.exRate}원)`
     : '환율';
   const fx = useFxTriple(r100);
   const { krw, local, rate } = fx;
@@ -297,6 +343,7 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
 
   useEffect(() => {
     if (editItem) {
+      c.setCur(codeOfRecord(editItem, trip));
       fx.load({
         krw:   editItem.krw   != null ? fmtInt(String(editItem.krw))   : '',
         local: editItem.local != null ? fmtDec(String(editItem.local)) : '',
@@ -318,7 +365,7 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
       krw: Math.round(toNum(krw)),
       local: toNum(local),
       rate: toNum(rate),
-      date, note,
+      date, note, ...c.field,
     };
     if (editing) {
       setExchanges(exchanges.map(x => x.id === editItem.id ? { ...x, ...payload } : x));
@@ -336,6 +383,7 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
         <Text style={styles.cardTitle}>{editing ? '현금 환전 수정' : '현금 환전 (계좌→현금)'}</Text>
         {editing && <TouchableOpacity onPress={handleCancel} hitSlop={8}><Text style={styles.cancelEdit}>취소</Text></TouchableOpacity>}
       </View>
+      <CurrencyPick c={c} />
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>원화(계좌차감)</Text>
@@ -348,7 +396,7 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
       </View>
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Text style={styles.label}>환율 ({trip.country.r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
+          <Text style={styles.label}>환율 ({r100 ? `100${sym} 기준` : `1${sym} 기준`})</Text>
           <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
@@ -371,7 +419,8 @@ function ExchangeForm({ trip, exchanges, setExchanges, sym, r100, calcRate, edit
   );
 }
 
-function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
+function AtmForm({ trip, atms, setAtms, editItem, onDone }) {
+  const c = useFormCurrency(trip);
   const [local, setLocal] = useState('');
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
@@ -379,6 +428,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
 
   useEffect(() => {
     if (editItem) {
+      c.setCur(codeOfRecord(editItem, trip));
       setLocal(editItem.local != null ? fmtDec(String(editItem.local)) : '');
       setDate(editItem.date || '');
       setNote(editItem.note || '');
@@ -390,7 +440,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
   const handleSubmit = () => {
     if (!local) return notify('인출 외화 금액을 입력해 주세요.');
     if (!date)  return notify('날짜를 선택해 주세요.');
-    const payload = { local: toNum(local), date, note };
+    const payload = { local: toNum(local), date, note, ...c.field };
     if (editing) {
       setAtms(atms.map(x => x.id === editItem.id ? { ...x, ...payload } : x));
       onDone();
@@ -411,6 +461,7 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
         트래블카드 카드로 현지 ATM에서 현금 인출 시 사용합니다.{'\n'}
         카드 잔액이 줄고 현금 잔액이 늘어납니다 (환율 변환 없음).
       </Text>
+      <CurrencyPick c={c} />
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>인출 외화 금액</Text>
@@ -433,7 +484,9 @@ function AtmForm({ trip, atms, setAtms, sym, editItem, onDone }) {
   );
 }
 
-function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) {
+function RefundForm({ trip, refunds, setRefunds, editItem, onDone }) {
+  const c = useFormCurrency(trip);
+  const { sym, r100 } = c;
   const fx = useFxTriple(r100);
   const { krw, local, rate } = fx;
   const [date, setDate] = useState('');
@@ -442,6 +495,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) 
 
   useEffect(() => {
     if (editItem) {
+      c.setCur(codeOfRecord(editItem, trip));
       fx.load({
         krw:   editItem.krw   != null ? fmtInt(String(editItem.krw))   : '',
         local: editItem.local != null ? fmtDec(String(editItem.local)) : '',
@@ -462,7 +516,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) 
       local: toNum(local),
       krw: Math.round(toNum(krw)),
       rate: toNum(rate),
-      date, note,
+      date, note, ...c.field,
     };
     if (editing) {
       setRefunds(refunds.map(x => x.id === editItem.id ? { ...x, ...payload } : x));
@@ -484,6 +538,7 @@ function RefundForm({ trip, refunds, setRefunds, sym, r100, editItem, onDone }) 
         트래블카드 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.{'\n'}
         카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
       </Text>
+      <CurrencyPick c={c} />
       <View style={styles.formRow}>
         <View style={styles.col}>
           <Text style={styles.label}>이전 외화 금액</Text>

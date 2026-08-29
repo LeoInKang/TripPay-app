@@ -12,6 +12,7 @@ import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
 import { fmtInt, fmtDec, toNum } from '../../format';
+import { tripCurrencies, primaryCode, codeOfRecord } from '../../currency';
 
 export default function ListTab({ trip, charges = [], exchanges = [], expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
@@ -102,6 +103,9 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
       };
       if (toFx && draft.pay === PAY_CREDIT && draft.krwActual > 0) next.krwActual = draft.krwActual;
       else delete next.krwActual;
+      // 통화: 주 통화면 필드를 두지 않는다 (구버전과 같은 모양). 원화 지출에는 통화가 없다.
+      if (toFx && draft.cur) next.cur = draft.cur;
+      else delete next.cur;
       delete next.type; // 목록으로 구분하므로 항목에는 담지 않는다
       return next;
     };
@@ -217,7 +221,7 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
               <View style={styles.amtBox}>
                 <Text style={styles.amt}>
                   {item.type === 'fx'
-                    ? `${sym}${item.amt.toLocaleString('ko-KR')}`
+                    ? `${_symOfExp(item, trip, sym)}${item.amt.toLocaleString('ko-KR')}`
                     : `₩${item.amt.toLocaleString('ko-KR')}`}
                 </Text>
                 {item.type === 'fx' && item.pay === PAY_CREDIT && (
@@ -235,6 +239,7 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
       </ScrollView>
 
       <EditExpenseModal
+          trip={trip}
         item={editItem}
         sym={sym}
         payMethods={PAY_METHODS}
@@ -246,7 +251,15 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
   );
 }
 
-function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
+// 외화 지출 한 건의 통화 기호 (cur 가 없으면 주 통화)
+function _symOfExp(item, trip, fallback) {
+  const list = tripCurrencies(trip);
+  const code = codeOfRecord(item, trip);
+  const hit = list.find(c => c.code === code);
+  return (hit && hit.sym) || fallback;
+}
+
+function EditExpenseModal({ item, trip, sym, payMethods, members, onClose, onSave }) {
   // 안드로이드 제스처 바에 하단 버튼이 먹히지 않도록 실제 시스템 바 높이를 반영한다
   const insets = useSafeAreaInsets();
   const [name, setName]   = useState('');
@@ -254,7 +267,10 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   const [pay, setPay]     = useState('');
   // 통화는 수정에서 바꿀 수 있다. 바꾸면 저장 시 지출이 반대쪽 목록으로 옮겨간다
   // (외화는 expenses, 원화는 krwExps). 입력 기본값이 외화라 실수 여지가 있어 넣었다.
-  const [cur, setCur]     = useState('LOCAL');
+  const curList = tripCurrencies(trip);
+  const home = primaryCode(trip);
+  const multi = curList.length > 1;
+  const [cur, setCur]     = useState(home);
   const [date, setDate]   = useState('');
   const [note, setNote]   = useState('');
   const [krwActual, setKrwActual] = useState('');
@@ -265,7 +281,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
       setName(item.name || '');
       setAmt(item.amt != null ? (item.type === 'fx' ? fmtDec(String(item.amt)) : fmtInt(String(item.amt))) : '');
       setPay(item.pay || (payMethods[0] || ''));
-      setCur(item.type === 'fx' ? 'LOCAL' : 'KRW');
+      setCur(item.type === 'fx' ? codeOfRecord(item, trip) : 'KRW');
       setDate(item.date || '');
       setNote(item.note || '');
       setKrwActual(item.krwActual > 0 ? fmtInt(String(item.krwActual)) : '');
@@ -278,7 +294,9 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
   }, [item]);
 
   if (!item) return null;
-  const isFx = cur === 'LOCAL';           // 화면·검증 기준 (사용자가 바꾼 값)
+  const isFx = cur !== 'KRW';             // 화면·검증 기준 (사용자가 바꾼 값)
+  const curObj = curList.find(c => c.code === cur) || curList[0] || {};
+  const curSym = isFx ? (curObj.sym || sym) : '₩';
   const wasFx = item.type === 'fx';       // 원래 저장 위치
 
   const save = () => {
@@ -296,6 +314,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
       amt: num,
       pay,                                   // 원화도 분류용으로 저장한다
       krwActual: isFx ? Math.round(toNum(krwActual)) : 0,
+      cur: isFx && cur !== home ? cur : undefined,
       date,
       note,
       participants: splitVal ? splitVal.participants : undefined,
@@ -334,14 +353,17 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
                 <Segment
                   label="통화"
                   value={cur}
-                  options={[{ value: 'LOCAL', label: `외화 ${sym}` }, { value: 'KRW', label: '원화 ₩' }]}
+                  options={[
+                    ...curList.map(c => ({ value: c.code, label: multi ? `${c.code} ${c.sym}` : `외화 ${c.sym}` })),
+                    { value: 'KRW', label: multi ? 'KRW ₩' : '원화 ₩' },
+                  ]}
                   onChange={(v) => {
                     if (v === cur) return;
                     setCur(v);
                     if (v === 'KRW') setKrwActual('');
                     // 원화는 정수뿐이라 소수점은 반올림해 정리한다
                     const n = toNum(amt);
-                    if (n) setAmt(v === 'LOCAL' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
+                    if (n) setAmt(v !== 'KRW' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
                     // 고정액은 금액 단위가 바뀌면 의미를 잃으므로 균등으로 되돌린다
                     setSplitVal(prev => (prev && prev.split && prev.split.mode === 'fixed')
                       ? { ...prev, split: { mode: 'equal', values: {} } }
@@ -354,7 +376,7 @@ function EditExpenseModal({ item, sym, payMethods, members, onClose, onSave }) {
             {/* 3줄: 금액 | 결제수단 (원화의 결제수단은 분류용 — 차감처는 언제나 계좌) */}
             <View style={styles.formRow}>
               <View style={styles.col}>
-                <Text style={styles.labelTop}>{isFx ? `금액(${sym})` : '금액(원화)'}</Text>
+                <Text style={styles.labelTop}>{isFx ? `금액(${curSym})` : '금액(원화)'}</Text>
                 <TextInput style={styles.input} placeholder="0" keyboardType={isFx ? 'decimal-pad' : 'numeric'} value={amt} onChangeText={v => setAmt(isFx ? fmtDec(v) : fmtInt(v))} />
               </View>
               <View style={[styles.col, { flex: 1.6 }]}>

@@ -8,6 +8,7 @@ import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { fmtInt, fmtDec, toNum } from '../../format';
+import { tripCurrencies, primaryCode } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -44,9 +45,11 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
 // 외화·원화를 한 폼에서 입력한다. 통화 선택에 따라 저장 위치만 갈린다
 // (외화 → expenses, 원화 → krwExps). 데이터 구조·정산 규칙은 종전과 동일.
 function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
-  const fxSym = trip.country.sym;
+  // 통화 선택지 = 여행의 외화들 + 원화. 통화가 하나면 종전처럼 '외화 / 원화' 두 개다.
+  const curList = tripCurrencies(trip);
+  const home = primaryCode(trip);
 
-  const [cur,   setCur]   = useState('LOCAL');   // 'LOCAL'(외화) | 'KRW'(원화)
+  const [cur,   setCur]   = useState(home);   // 통화코드 | 'KRW'
   const [name,  setName]  = useState('');
   const [amt,   setAmt]   = useState('');
   const [pay,   setPay]   = useState(PAY_METHODS[0]);
@@ -55,8 +58,9 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const [note,  setNote]  = useState('');
   const [splitVal, setSplitVal] = useState(null);
 
-  const isFx = cur === 'LOCAL';
-  const sym  = isFx ? fxSym : '₩';
+  const isFx = cur !== 'KRW';
+  const curObj = curList.find(c => c.code === cur) || curList[0] || {};
+  const sym  = isFx ? (curObj.sym || '') : '₩';
   const amtNum = (isFx ? parseFloat : parseInt)((amt || '').replace(/,/g, '')) || 0;
   // 확정 원화는 외화를 신용카드로 결제했을 때만 의미가 있다 (원화 지출은 이미 원화)
   const showKrwActual = isFx && pay === PAY_CREDIT;
@@ -65,12 +69,14 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   const handleCurChange = (c) => {
     setCur(c);
     const n = toNum(amt);
-    if (n) setAmt(c === 'LOCAL' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
+    if (n) setAmt(c !== 'KRW' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
   };
 
+  // 통화가 하나면 '외화 ¥ / 원화 ₩', 여럿이면 통화 코드로 구분한다.
+  const multi = curList.length > 1;
   const curOptions = [
-    { value: 'LOCAL', label: `외화 ${fxSym}` },
-    { value: 'KRW',   label: '원화 ₩' },
+    ...curList.map(c => ({ value: c.code, label: multi ? `${c.code} ${c.sym}` : `외화 ${c.sym}` })),
+    { value: 'KRW', label: multi ? 'KRW ₩' : '원화 ₩' },
   ];
   const payOptions = PAY_METHODS.map(m => ({ value: m, label: m }));
 
@@ -90,6 +96,7 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
         pay,
         date,
         note,
+        ...(cur !== home ? { cur } : {}),
         ...(showKrwActual && actual > 0 ? { krwActual: actual } : {}),
         ...(splitVal || {}),
       }]);

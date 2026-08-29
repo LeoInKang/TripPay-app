@@ -5,6 +5,8 @@ import {
 } from 'react-native';
 import KeyboardAvoider from '../components/KeyboardAvoider';
 import DateField from '../components/FullDateField';
+import CountryPicker from '../components/CountryPicker';
+import { tripCurrencies, currencyHasData } from '../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -15,7 +17,11 @@ function notify(msg) {
 }
 
 export default function SettingsScreen({ route, navigation }) {
-  const { trip, onSave, deposits = [], expenses = [], krwExps = [] } = route.params || {};
+  const {
+    trip, onSave,
+    deposits = [], charges = [], exchanges = [], atms = [], refunds = [],
+    expenses = [], krwExps = [],
+  } = route.params || {};
 
   const [tripName,  setTripName]  = useState(trip?.name || '');
   const [startDate, setStartDate] = useState(trip?.startDate || '');
@@ -24,6 +30,9 @@ export default function SettingsScreen({ route, navigation }) {
   // orig = 저장된 원래 이름(신규는 null). 이름을 바꾸면 저장 시 renames로 내역까지 전파된다.
   const [memberRows, setMemberRows] = useState((trip?.members || []).map(m => ({ orig: m, name: m })));
   const [newMember, setNewMember] = useState('');
+  // 통화 목록. 첫 번째가 주 통화이고 바꿀 수 없다. 뒤에 경유국 통화를 더할 수 있다.
+  const [currencies, setCurrencies] = useState(() => tripCurrencies(trip));
+  const [addingCur, setAddingCur] = useState(null);
   const [editIdx,   setEditIdx]   = useState(null);
   const [editName,  setEditName]  = useState('');
 
@@ -35,6 +44,21 @@ export default function SettingsScreen({ route, navigation }) {
       (e.split && e.split.values && e.split.values[m] != null)
     );
     return inExp(expenses) || inExp(krwExps);
+  };
+
+  const tripData = { deposits, charges, exchanges, atms, refunds, expenses, krwExps };
+  const addCurrency = (c) => {
+    setAddingCur(null);
+    if (!c || !c.code) return;
+    if (currencies.some(x => x.code === c.code)) { notify('이미 추가된 통화예요.'); return; }
+    setCurrencies([...currencies, c]);
+  };
+  const removeCurrency = (code) => {
+    if (currencyHasData(trip, code, tripData)) {
+      notify('이 통화로 기록된 내역이 있어서 뺄 수 없어요.\n내역을 지우거나 통화를 바꾼 뒤 다시 시도해 주세요.');
+      return;
+    }
+    setCurrencies(currencies.filter(c => c.code !== code));
   };
 
   const addMember = () => {
@@ -105,6 +129,7 @@ export default function SettingsScreen({ route, navigation }) {
       endDate,
       note,
       members: names,
+      currencies,
     };
     const renamedOld = (trip?.members || []).map(m => renames[m] || m);
     const added = names.filter(n => !renamedOld.includes(n));
@@ -229,13 +254,42 @@ export default function SettingsScreen({ route, navigation }) {
           </Text>
         </View>
 
-        {/* 국가/통화 (변경 불가) */}
+        {/* 통화 — 주 통화는 고정, 경유국 통화는 추가할 수 있다 */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>국가 · 통화</Text>
-          <Text style={styles.infoValue}>
-            {trip?.country?.flag || '🌏'} {trip?.country?.name || ''} ({trip?.country?.code || ''})
+          <Text style={styles.infoLabel}>통화</Text>
+
+          {currencies.map((c, i) => (
+            <View key={c.code || i} style={styles.curRow}>
+              <Text style={styles.curName}>
+                {c.flag || '🌏'} {c.name || ''} ({c.code || ''})
+              </Text>
+              {i === 0 ? (
+                <Text style={styles.curBadge}>주 통화</Text>
+              ) : (
+                <TouchableOpacity onPress={() => removeCurrency(c.code)} hitSlop={8}>
+                  <Text style={styles.curDel}>✕</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+
+          {addingCur === null ? (
+            <TouchableOpacity style={styles.btnAddCur} onPress={() => setAddingCur(undefined)} activeOpacity={0.8}>
+              <Text style={styles.btnAddCurText}>+ 통화 추가</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={{ marginTop: 8 }}>
+              <CountryPicker value={addingCur} onChange={addCurrency} label="추가할 국가" />
+              <TouchableOpacity onPress={() => setAddingCur(null)} hitSlop={8}>
+                <Text style={styles.curCancel}>취소</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <Text style={styles.infoHint}>
+            여러 나라를 거치는 여행이면 통화를 더하세요. 지출·충전을 통화별로 기록합니다.{'\n'}
+            주 통화는 정산 기준이라 바꿀 수 없고, 기록이 있는 통화는 뺄 수 없어요.
           </Text>
-          <Text style={styles.infoHint}>국가·통화는 정산에 영향이 커서 바꿀 수 없어요.</Text>
         </View>
 
         <TouchableOpacity style={styles.btnSave} onPress={handleSave} activeOpacity={0.85}>
@@ -293,6 +347,20 @@ const styles = StyleSheet.create({
   infoLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },
   infoValue: { fontSize: 14, color: '#1a1a1a', fontWeight: '600' },
   infoHint: { fontSize: 11, color: '#9b9b9b', marginTop: 6, lineHeight: 16 },
+
+  curRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',
+  },
+  curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
+  curBadge: { fontSize: 11, color: '#1a3a5c', backgroundColor: '#e6eefa', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  curDel: { fontSize: 14, color: '#E24B4A', paddingHorizontal: 6 },
+  btnAddCur: {
+    marginTop: 10, paddingVertical: 10, borderRadius: 10,
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', alignItems: 'center', backgroundColor: '#fafafa',
+  },
+  btnAddCurText: { fontSize: 13, color: '#1a3a5c', fontWeight: '600' },
+  curCancel: { fontSize: 12, color: '#9b9b9b', marginTop: 6, textAlign: 'center' },
 
   memberRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

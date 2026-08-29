@@ -175,7 +175,7 @@ export default function MainScreen({ route, navigation }) {
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Help')}>
             <Text style={styles.iconBtnText}>❓ 도움말</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, deposits, expenses, krwExps, onSave: handleTripSave })}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps, onSave: handleTripSave })}>
             <Text style={styles.iconBtnText}>⚙ 설정</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('History')}>

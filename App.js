@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ActivityIndicator, Platform, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, ScrollView, ActivityIndicator, Platform, Alert } from 'react-native';
 import SetupScreen   from './screens/SetupScreen';
 import MainScreen    from './screens/MainScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -63,7 +63,14 @@ function LandingScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <View style={styles.background}>
+      {/* 화면이 짧으면(360x640 같은 소형 안드로이드) 로고 영역이 넘쳐 버튼에 깔린다.
+          RN은 넘친 내용을 자르지 않으므로 ScrollView로 받아낸다.
+          flexGrow:1 이라 화면이 넉넉하면 종전과 똑같이 위아래로 벌어진다. */}
+      <ScrollView
+        style={styles.background}
+        contentContainerStyle={styles.backgroundContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.heroSection}>
           <Text style={styles.planeEmoji}>✈️</Text>
           <Text style={styles.logoText}>
@@ -93,7 +100,7 @@ function LandingScreen({ navigation }) {
           )}
         </View>
         <Text style={styles.version}>TripPay v1.2.3</Text>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -155,7 +162,8 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a3a5c' },
   boot: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'center' },
-  background: { flex: 1, backgroundColor: '#1a3a5c', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 60, paddingHorizontal: 24 },
+  background: { flex: 1, backgroundColor: '#1a3a5c' },
+  backgroundContent: { flexGrow: 1, alignItems: 'center', justifyContent: 'space-between', paddingVertical: 60, paddingHorizontal: 24 },
   heroSection: { alignItems: 'center', flex: 1, justifyContent: 'center' },
   planeEmoji: { fontSize: 80, marginBottom: 16 },
   logoText: { fontSize: 48, fontWeight: '800', marginBottom: 16 },

@@ -10,30 +10,50 @@
 // 회비(deposits)의 cur 만 예외로 'KRW' | 'LOCAL' | 통화코드 세 가지다.
 // 'LOCAL' 은 구버전이 쓰던 값이고 주 통화를 뜻한다.
 
-// 여행의 통화 목록. 항상 최소 한 개를 돌려준다.
-export function tripCurrencies(trip) {
-  const list = trip && Array.isArray(trip.currencies) ? trip.currencies.filter(Boolean) : [];
+// 여행이 거친 나라 목록. 표시용이라 통화가 겹쳐도 그대로 둔다
+// (이탈리아·프랑스를 둘 다 넣으면 둘 다 보여야 한다).
+export function tripCountries(trip) {
+  const list = trip && Array.isArray(trip.countries) ? trip.countries.filter(Boolean) : [];
   if (list.length) return list;
+  if (trip && Array.isArray(trip.currencies) && trip.currencies.length) return trip.currencies.filter(Boolean);
   return trip && trip.country ? [trip.country] : [];
 }
 
-// 주 통화 (구버전에서는 trip.country 하나뿐이었다)
-export function primaryCurrency(trip) {
-  return tripCurrencies(trip)[0] || null;
+// 정산에 쓰는 통화 목록. 나라 목록을 통화 코드 기준으로 유일화한 것.
+// 이탈리아·프랑스는 한 줄(EUR)로 합쳐진다.
+export function tripCurrencies(trip) {
+  const seen = new Set();
+  const out = [];
+  for (const c of tripCountries(trip)) {
+    const code = (c && c.code) || '';
+    if (seen.has(code)) continue;
+    seen.add(code);
+    out.push(c);
+  }
+  return out;
 }
 
-// 코드가 없는 구버전·테스트 데이터도 있어 항상 문자열로 맞춘다 (undefined면 비교가 어긋난다).
+// 정산 기준 통화. 목록 순서와 분리돼 있어 나라를 위아래로 옮겨도 정산은 흔들리지 않는다.
+// homeCode가 없는 구버전은 종전대로 첫 통화(= trip.country)를 앵커로 본다.
 export function primaryCode(trip) {
-  const c = primaryCurrency(trip);
-  return (c && c.code) || '';
+  const home = trip && trip.homeCode;
+  if (home) return home;
+  const first = tripCurrencies(trip)[0];
+  return (first && first.code) || '';
+}
+
+export function primaryCurrency(trip) {
+  return currencyOf(trip, primaryCode(trip));
 }
 
 // 코드로 통화를 찾는다. 못 찾으면 주 통화로 떨어진다 —
 // 데이터에 남아 있는 통화를 여행에서 지웠을 때 화면이 깨지지 않게 한다.
 export function currencyOf(trip, code) {
-  if (!code) return primaryCurrency(trip);
-  const hit = tripCurrencies(trip).find(c => c && c.code === code);
-  return hit || primaryCurrency(trip);
+  const list = tripCurrencies(trip);
+  const hit = code ? list.find(c => c && c.code === code) : null;
+  if (hit) return hit;
+  const home = trip && trip.homeCode;
+  return (home && list.find(c => c && c.code === home)) || list[0] || null;
 }
 
 // 기록 한 건의 통화 코드. cur 가 없으면 주 통화.
@@ -58,7 +78,7 @@ export function filterByCurrency(items, trip, code) {
 // 통화를 여행에서 뺄 수 있는지. 기록이 하나라도 있으면 못 뺀다 (참석자 삭제 규칙과 같다).
 // 주 통화는 언제나 못 뺀다.
 export function currencyHasData(trip, code, data = {}) {
-  if (!code || code === primaryCode(trip)) return true;
+  if (!code || code === primaryCode(trip)) return true;  // 앵커 통화는 뺄 수 없다
   const { expenses = [], charges = [], exchanges = [], atms = [], refunds = [], deposits = [] } = data;
   const used = (arr) => arr.some(i => codeOfRecord(i, trip) === code);
   return used(expenses) || used(charges) || used(exchanges) || used(atms) || used(refunds)

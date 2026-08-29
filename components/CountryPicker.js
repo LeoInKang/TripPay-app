@@ -7,9 +7,22 @@ import KeyboardAvoider from './KeyboardAvoider';
 import { COUNTRIES, POPULAR_CODES, REGIONS, searchCountries } from '../countries';
 
 // 검색 + 자주 가는 국가 + 지역별 그룹 바텀시트
-export default function CountryPicker({ value, onChange, label = '여행 국가' }) {
-  const [open, setOpen] = useState(false);
+export default function CountryPicker({
+  value, onChange, label = '여행 국가',
+  multi = false,        // 여러 국가를 한 번에 고른다 (value·onChange가 배열)
+  openNow = false,      // 트리거 없이 바로 열기
+  onClose,              // 바로 열기로 썼을 때 닫힘 알림
+  title = '여행 국가 선택',
+}) {
+  const [open, setOpen] = useState(!!openNow);
   const [q, setQ] = useState('');
+
+  // 같은 나라를 두 번 담지 않도록 이름+코드로 구분한다 (이탈리아·프랑스는 코드가 같다)
+  const keyOf = (c) => (c ? `${c.code}|${c.name}` : '');
+  const picked = multi ? (Array.isArray(value) ? value : []) : [];
+  const isOn = (c) => (multi ? picked.some(x => keyOf(x) === keyOf(c)) : value?.code === c.code);
+
+  const close = () => { setOpen(false); setQ(''); if (onClose) onClose(); };
 
   const results = searchCountries(q);
   const searching = q.trim().length > 0;
@@ -17,11 +30,15 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
     .map(code => COUNTRIES.find(c => c.code === code))
     .filter(Boolean);
 
-  const pick = (c) => { onChange(c); setOpen(false); setQ(''); };
+  const pick = (c) => {
+    if (!multi) { onChange(c); close(); return; }
+    onChange(isOn(c) ? picked.filter(x => keyOf(x) !== keyOf(c)) : [...picked, c]);
+  };
 
   return (
     <View>
-      <Text style={styles.label}>{label}</Text>
+      {!openNow && <Text style={styles.label}>{label}</Text>}
+      {!openNow && (
       <TouchableOpacity style={styles.trigger} activeOpacity={0.7} onPress={() => setOpen(true)}>
         {value ? (
           <Text style={styles.triggerText}>
@@ -32,14 +49,15 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
         )}
         <Text style={styles.chev}>▾</Text>
       </TouchableOpacity>
+      )}
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
+      <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
         {/* 검색창이 키보드에 가리지 않도록 모달 안에서 감싼다 (Modal은 별도 뷰 계층) */}
         <KeyboardAvoider style={{ flex: 1 }}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
+        <Pressable style={styles.backdrop} onPress={close}>
           <Pressable style={styles.sheet} onPress={() => {}}>
             <View style={styles.handle} />
-            <Text style={styles.sheetTitle}>여행 국가 선택</Text>
+            <Text style={styles.sheetTitle}>{title}</Text>
 
             <View style={styles.searchBox}>
               <Text style={styles.searchIcon}>🔍</Text>
@@ -65,10 +83,10 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
                     {popular.map(c => (
                       <TouchableOpacity
                         key={'p-' + c.code}
-                        style={[styles.chip, value?.code === c.code && styles.chipOn]}
+                        style={[styles.chip, isOn(c) && styles.chipOn]}
                         onPress={() => pick(c)}
                       >
-                        <Text style={[styles.chipText, value?.code === c.code && styles.chipTextOn]}>
+                        <Text style={[styles.chipText, isOn(c) && styles.chipTextOn]}>
                           {c.flag} {c.name}
                         </Text>
                       </TouchableOpacity>
@@ -82,7 +100,7 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
                   <Text style={styles.empty}>검색 결과가 없어요</Text>
                 ) : (
                   results.map(c => (
-                    <Row key={'s-' + c.code + c.name} c={c} selected={value?.code === c.code} onPress={() => pick(c)} />
+                    <Row key={'s-' + c.code + c.name} c={c} selected={isOn(c)} onPress={() => pick(c)} />
                   ))
                 )
               ) : (
@@ -93,7 +111,7 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
                     <View key={region}>
                       <Text style={styles.groupLabel}>{region}</Text>
                       {list.map(c => (
-                        <Row key={c.code + c.name} c={c} selected={value?.code === c.code} onPress={() => pick(c)} />
+                        <Row key={c.code + c.name} c={c} selected={isOn(c)} onPress={() => pick(c)} />
                       ))}
                     </View>
                   );
@@ -101,6 +119,14 @@ export default function CountryPicker({ value, onChange, label = '여행 국가'
               )}
               <View style={{ height: 20 }} />
             </ScrollView>
+
+            {multi && (
+              <TouchableOpacity style={styles.doneBtn} onPress={close} activeOpacity={0.85}>
+                <Text style={styles.doneText}>
+                  {picked.length > 0 ? `${picked.length}개 선택 · 완료` : '완료'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </Pressable>
         </Pressable>
         </KeyboardAvoider>
@@ -142,6 +168,11 @@ const styles = StyleSheet.create({
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 12 },
   sheetTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', textAlign: 'center', marginBottom: 12 },
+  doneBtn: {
+    backgroundColor: '#1a3a5c', borderRadius: 12, paddingVertical: 14,
+    alignItems: 'center', marginTop: 8,
+  },
+  doneText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
   searchBox: {
     flexDirection: 'row', alignItems: 'center', gap: 8,

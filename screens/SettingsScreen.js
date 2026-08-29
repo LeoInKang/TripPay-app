@@ -6,7 +6,7 @@ import {
 import KeyboardAvoider from '../components/KeyboardAvoider';
 import DateField from '../components/FullDateField';
 import CountryPicker from '../components/CountryPicker';
-import { tripCurrencies, currencyHasData } from '../currency';
+import { tripCountries, currencyHasData, primaryCode } from '../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -30,9 +30,11 @@ export default function SettingsScreen({ route, navigation }) {
   // orig = 저장된 원래 이름(신규는 null). 이름을 바꾸면 저장 시 renames로 내역까지 전파된다.
   const [memberRows, setMemberRows] = useState((trip?.members || []).map(m => ({ orig: m, name: m })));
   const [newMember, setNewMember] = useState('');
-  // 통화 목록. 첫 번째가 주 통화이고 바꿀 수 없다. 뒤에 경유국 통화를 더할 수 있다.
-  const [currencies, setCurrencies] = useState(() => tripCurrencies(trip));
-  const [addingCur, setAddingCur] = useState(null);
+  // 거쳐 간 나라 목록. 통화가 겹쳐도 그대로 둔다(이탈리아·프랑스).
+  // 순서는 표시용이라 자유롭게 옮길 수 있다 — 정산 기준은 homeCode가 따로 들고 있다.
+  const [countries, setCountries] = useState(() => tripCountries(trip));
+  const [picking, setPicking] = useState(false);
+  const homeCode = primaryCode(trip);
   const [editIdx,   setEditIdx]   = useState(null);
   const [editName,  setEditName]  = useState('');
 
@@ -47,18 +49,23 @@ export default function SettingsScreen({ route, navigation }) {
   };
 
   const tripData = { deposits, charges, exchanges, atms, refunds, expenses, krwExps };
-  const addCurrency = (c) => {
-    setAddingCur(null);
-    if (!c || !c.code) return;
-    if (currencies.some(x => x.code === c.code)) { notify('이미 추가된 통화예요.'); return; }
-    setCurrencies([...currencies, c]);
-  };
-  const removeCurrency = (code) => {
-    if (currencyHasData(trip, code, tripData)) {
-      notify('이 통화로 기록된 내역이 있어서 뺄 수 없어요.\n내역을 지우거나 통화를 바꾼 뒤 다시 시도해 주세요.');
+  // 같은 통화를 쓰는 다른 나라는 뺄 수 있다 — 그 통화를 쓰는 나라가 하나도 안 남을 때만 막는다.
+  const removeCountry = (i) => {
+    const gone = countries[i];
+    const stillUsed = countries.some((c, j) => j !== i && c.code === gone.code);
+    if (!stillUsed && currencyHasData(trip, gone.code, tripData)) {
+      notify(`${gone.code}로 기록된 내역이 있어서 뺄 수 없어요.\n내역을 지우거나 통화를 바꾼 뒤 다시 시도해 주세요.`);
       return;
     }
-    setCurrencies(currencies.filter(c => c.code !== code));
+    setCountries(countries.filter((_, j) => j !== i));
+  };
+
+  const moveCountry = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= countries.length) return;
+    const next = [...countries];
+    [next[i], next[j]] = [next[j], next[i]];
+    setCountries(next);
   };
 
   const addMember = () => {
@@ -129,7 +136,9 @@ export default function SettingsScreen({ route, navigation }) {
       endDate,
       note,
       members: names,
-      currencies,
+      countries,
+      // 정산 기준은 목록 순서와 무관하게 유지한다. 순서를 바꿔도 정산이 흔들리지 않는다.
+      homeCode,
     };
     const renamedOld = (trip?.members || []).map(m => renames[m] || m);
     const added = names.filter(n => !renamedOld.includes(n));
@@ -254,41 +263,46 @@ export default function SettingsScreen({ route, navigation }) {
           </Text>
         </View>
 
-        {/* 통화 — 주 통화는 고정, 경유국 통화는 추가할 수 있다 */}
+        {/* 여행 국가 — 통화가 겹쳐도 나라는 각자 보인다. 순서는 표시용이라 자유롭게 옮긴다. */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>통화</Text>
+          <Text style={styles.infoLabel}>여행 국가</Text>
 
-          {currencies.map((c, i) => (
-            <View key={c.code || i} style={styles.curRow}>
-              <Text style={styles.curName}>
-                {c.flag || '🌏'} {c.name || ''} ({c.code || ''})
-              </Text>
-              {i === 0 ? (
-                <Text style={styles.curBadge}>주 통화</Text>
-              ) : (
-                <TouchableOpacity onPress={() => removeCurrency(c.code)} hitSlop={8}>
-                  <Text style={styles.curDel}>✕</Text>
+          {countries.map((c, i) => (
+            <View key={(c.code || '') + c.name + i} style={styles.curRow}>
+              <View style={styles.curMove}>
+                <TouchableOpacity onPress={() => moveCountry(i, -1)} disabled={i === 0} hitSlop={6}>
+                  <Text style={[styles.curArrow, i === 0 && styles.curArrowOff]}>▲</Text>
                 </TouchableOpacity>
-              )}
+                <TouchableOpacity onPress={() => moveCountry(i, 1)} disabled={i === countries.length - 1} hitSlop={6}>
+                  <Text style={[styles.curArrow, i === countries.length - 1 && styles.curArrowOff]}>▼</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.curName}>{c.flag || '🌏'} {c.name || ''}</Text>
+              <Text style={styles.curCode}>{c.code} {c.sym}</Text>
+              <TouchableOpacity onPress={() => removeCountry(i)} hitSlop={8}>
+                <Text style={styles.curDel}>✕</Text>
+              </TouchableOpacity>
             </View>
           ))}
 
-          {addingCur === null ? (
-            <TouchableOpacity style={styles.btnAddCur} onPress={() => setAddingCur(undefined)} activeOpacity={0.8}>
-              <Text style={styles.btnAddCurText}>+ 통화 추가</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ marginTop: 8 }}>
-              <CountryPicker value={addingCur} onChange={addCurrency} label="추가할 국가" />
-              <TouchableOpacity onPress={() => setAddingCur(null)} hitSlop={8}>
-                <Text style={styles.curCancel}>취소</Text>
-              </TouchableOpacity>
-            </View>
+          <TouchableOpacity style={styles.btnAddCur} onPress={() => setPicking(true)} activeOpacity={0.8}>
+            <Text style={styles.btnAddCurText}>+ 국가 추가</Text>
+          </TouchableOpacity>
+
+          {picking && (
+            <CountryPicker
+              multi
+              openNow
+              value={countries}
+              onChange={setCountries}
+              onClose={() => setPicking(false)}
+              title="여행 국가 선택 (여러 개 가능)"
+            />
           )}
 
           <Text style={styles.infoHint}>
-            여러 나라를 거치는 여행이면 통화를 더하세요. 지출·충전을 통화별로 기록합니다.{'\n'}
-            주 통화는 정산 기준이라 바꿀 수 없고, 기록이 있는 통화는 뺄 수 없어요.
+            거쳐 간 나라를 다 넣으세요. 통화가 같은 나라는 지출 입력에서 하나로 묶입니다.{'\n'}
+            정산 기준은 {homeCode}이고 순서를 바꿔도 달라지지 않아요. 기록이 있는 통화는 뺄 수 없습니다.
           </Text>
         </View>
 
@@ -353,6 +367,10 @@ const styles = StyleSheet.create({
     paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
+  curCode: { fontSize: 12, color: '#9b9b9b', marginRight: 10 },
+  curMove: { marginRight: 8 },
+  curArrow: { fontSize: 10, color: '#6b6b6b', lineHeight: 13 },
+  curArrowOff: { color: '#d8d8d8' },
   curBadge: { fontSize: 11, color: '#1a3a5c', backgroundColor: '#e6eefa', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   curDel: { fontSize: 14, color: '#E24B4A', paddingHorizontal: 6 },
   btnAddCur: {

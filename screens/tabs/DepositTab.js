@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
 import Segment     from '../../components/Segment';
+import CurrencyChips from '../../components/CurrencyChips';
 import DateField   from '../../components/DateField';
 import { fmtInt, fmtDec, toNum } from '../../format';
 import { tripCurrencies, primaryCode, codeOfDeposit } from '../../currency';
@@ -18,7 +19,7 @@ function notify(msg) {
   }
 }
 
-export default function DepositTab({ trip, deposits, setDeposits, charges = [], exchanges = [] }) {
+export default function DepositTab({ trip, deposits, setDeposits, charges = [], exchanges = [], lastCur, setLastCur }) {
   const [member,   setMember]   = useState(trip.members[0]);
   const [currency, setCurrency] = useState('KRW');
   const [amount,   setAmount]   = useState('');
@@ -58,6 +59,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   // 통화를 바꾸면 금액 표기 규칙도 바뀐다. 원화는 정수뿐이라 소수점은 반올림해 정리한다.
   const handleCurrencyChange = (c) => {
     setCurrency(c);
+    if (setLastCur) setLastCur(c);
     const n = toNum(amount);
     if (n) setAmount(c !== 'KRW' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
     setKrwEquiv(c !== 'KRW' && n ? toKrwLocal(n).toLocaleString('ko-KR') : '');
@@ -175,12 +177,9 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
             />
           </View>
           <View style={[styles.col, { flex: 1.3 }]}>
-            <Segment
-              label="통화"
-              value={currency}
-              options={currencyOptions}
-              onChange={handleCurrencyChange}
-            />
+            {currencyOptions.length > 3
+              ? <CurrencyChips label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />
+              : <Segment label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />}
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>{currency === 'KRW' ? '회비(원)' : `회비(${sym})`}</Text>

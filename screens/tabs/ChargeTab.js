@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import DateField from '../../components/DateField';
 import Segment from '../../components/Segment';
+import CurrencyChips from '../../components/CurrencyChips';
 import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
 import { tripCurrencies, primaryCode, codeOfRecord } from '../../currency';
 
@@ -17,10 +18,13 @@ function notify(msg) {
 }
 
 // 폼의 통화 상태. 통화가 하나뿐이면 선택 UI를 숨기고 주 통화를 그대로 쓴다.
-function useFormCurrency(trip) {
+function useFormCurrency(trip, lastCur, setLastCur) {
   const list = tripCurrencies(trip);
   const home = primaryCode(trip);
-  const [cur, setCur] = useState(home);
+  // 마지막에 쓴 통화로 시작한다 (원화는 충전·환전에 없으므로 외화만 이어받는다)
+  const start = lastCur && lastCur !== 'KRW' && list.some(c => c.code === lastCur) ? lastCur : home;
+  const [cur, setCurRaw] = useState(start);
+  const setCur = (c) => { setCurRaw(c); if (setLastCur) setLastCur(c); };
   const obj = list.find(c => c.code === cur) || list[0] || {};
   return {
     cur, setCur, home,
@@ -36,15 +40,13 @@ function useFormCurrency(trip) {
 
 function CurrencyPick({ c }) {
   if (!c.multi) return null;
+  const options = c.list.map(x => ({ value: x.code, label: `${x.code} ${x.sym}` }));
   return (
     <View style={styles.formRow}>
       <View style={styles.col}>
-        <Segment
-          label="통화"
-          value={c.cur}
-          options={c.list.map(x => ({ value: x.code, label: `${x.code} ${x.sym}` }))}
-          onChange={c.setCur}
-        />
+        {options.length > 3
+          ? <CurrencyChips label="통화" value={c.cur} options={options} onChange={c.setCur} />
+          : <Segment label="통화" value={c.cur} options={options} onChange={c.setCur} />}
       </View>
     </View>
   );
@@ -101,7 +103,8 @@ const SUB_TABS = [
 
 export default function ChargeTab({
   trip, charges, exchanges, atms, refunds,
-  setCharges, setExchanges, setAtms, setRefunds
+  setCharges, setExchanges, setAtms, setRefunds,
+  lastCur, setLastCur,
 }) {
   const [subTab, setSubTab] = useState('charge');
   const [editTarget, setEditTarget] = useState(null); // { type, item }
@@ -170,10 +173,10 @@ export default function ChargeTab({
         ))}
       </ScrollView>
 
-      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, editItem: editItemFor('charge'), onDone: clearEdit }} />}
-      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, editItem: editItemFor('exchange'), onDone: clearEdit }} />}
-      {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, editItem: editItemFor('atm'), onDone: clearEdit }} />}
-      {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, editItem: editItemFor('refund'), onDone: clearEdit }} />}
+      {subTab === 'charge'   && <ChargeForm   {...{ trip, charges, setCharges, lastCur, setLastCur, editItem: editItemFor('charge'), onDone: clearEdit }} />}
+      {subTab === 'exchange' && <ExchangeForm {...{ trip, exchanges, setExchanges, lastCur, setLastCur, editItem: editItemFor('exchange'), onDone: clearEdit }} />}
+      {subTab === 'atm'      && <AtmForm      {...{ trip, atms, setAtms, lastCur, setLastCur, editItem: editItemFor('atm'), onDone: clearEdit }} />}
+      {subTab === 'refund'   && <RefundForm   {...{ trip, refunds, setRefunds, lastCur, setLastCur, editItem: editItemFor('refund'), onDone: clearEdit }} />}
 
       {/* 전체 내역 */}
       <View style={styles.card}>
@@ -239,8 +242,8 @@ export default function ChargeTab({
   );
 }
 
-function ChargeForm({ trip, charges, setCharges, editItem, onDone }) {
-  const c = useFormCurrency(trip);
+function ChargeForm({ trip, lastCur, setLastCur, charges, setCharges, editItem, onDone }) {
+  const c = useFormCurrency(trip, lastCur, setLastCur);
   const { sym, r100 } = c;
   const rateHint = c.exRate
     ? `예: ${c.exRate} (${r100 ? '100' : '1'}${sym} = ${c.exRate}원)`
@@ -329,8 +332,8 @@ function ChargeForm({ trip, charges, setCharges, editItem, onDone }) {
   );
 }
 
-function ExchangeForm({ trip, exchanges, setExchanges, editItem, onDone }) {
-  const c = useFormCurrency(trip);
+function ExchangeForm({ trip, lastCur, setLastCur, exchanges, setExchanges, editItem, onDone }) {
+  const c = useFormCurrency(trip, lastCur, setLastCur);
   const { sym, r100 } = c;
   const rateHint = c.exRate
     ? `예: ${c.exRate} (${r100 ? '100' : '1'}${sym} = ${c.exRate}원)`
@@ -419,8 +422,8 @@ function ExchangeForm({ trip, exchanges, setExchanges, editItem, onDone }) {
   );
 }
 
-function AtmForm({ trip, atms, setAtms, editItem, onDone }) {
-  const c = useFormCurrency(trip);
+function AtmForm({ trip, lastCur, setLastCur, atms, setAtms, editItem, onDone }) {
+  const c = useFormCurrency(trip, lastCur, setLastCur);
   const [local, setLocal] = useState('');
   const [date, setDate] = useState('');
   const [note, setNote] = useState('');
@@ -484,8 +487,8 @@ function AtmForm({ trip, atms, setAtms, editItem, onDone }) {
   );
 }
 
-function RefundForm({ trip, refunds, setRefunds, editItem, onDone }) {
-  const c = useFormCurrency(trip);
+function RefundForm({ trip, lastCur, setLastCur, refunds, setRefunds, editItem, onDone }) {
+  const c = useFormCurrency(trip, lastCur, setLastCur);
   const { sym, r100 } = c;
   const fx = useFxTriple(r100);
   const { krw, local, rate } = fx;

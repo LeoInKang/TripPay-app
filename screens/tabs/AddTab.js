@@ -4,6 +4,7 @@ import {
   StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import Segment     from '../../components/Segment';
+import CurrencyChips from '../../components/CurrencyChips';
 import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
@@ -18,7 +19,7 @@ function notify(msg) {
   }
 }
 
-export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps, openImportAI }) {
+export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExps, openImportAI, lastCur, setLastCur }) {
   return (
     <ScrollView
       style={styles.container}
@@ -33,6 +34,8 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
       )}
       <ExpenseForm
         trip={trip}
+        lastCur={lastCur}
+        setLastCur={setLastCur}
         expenses={expenses}
         krwExps={krwExps}
         setExpenses={setExpenses}
@@ -44,12 +47,12 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
 
 // 외화·원화를 한 폼에서 입력한다. 통화 선택에 따라 저장 위치만 갈린다
 // (외화 → expenses, 원화 → krwExps). 데이터 구조·정산 규칙은 종전과 동일.
-function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
+function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps, lastCur, setLastCur }) {
   // 통화 선택지 = 여행의 외화들 + 원화. 통화가 하나면 종전처럼 '외화 / 원화' 두 개다.
   const curList = tripCurrencies(trip);
   const home = primaryCode(trip);
 
-  const [cur,   setCur]   = useState(home);   // 통화코드 | 'KRW'
+  const [cur,   setCur]   = useState(lastCur || home);   // 통화코드 | 'KRW'
   const [name,  setName]  = useState('');
   const [amt,   setAmt]   = useState('');
   const [pay,   setPay]   = useState(PAY_METHODS[0]);
@@ -68,6 +71,7 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
   // 통화를 바꾸면 금액 표기 규칙도 바뀐다. 원화는 정수뿐이라 소수점은 반올림해 정리한다.
   const handleCurChange = (c) => {
     setCur(c);
+    if (setLastCur) setLastCur(c);
     const n = toNum(amt);
     if (n) setAmt(c !== 'KRW' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
   };
@@ -138,7 +142,9 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps }) {
       {/* 2줄: 통화 */}
       <View style={styles.formRow}>
         <View style={styles.col}>
-          <Segment label="통화" value={cur} options={curOptions} onChange={handleCurChange} />
+          {curOptions.length > 3
+            ? <CurrencyChips label="통화" value={cur} options={curOptions} onChange={handleCurChange} />
+            : <Segment label="통화" value={cur} options={curOptions} onChange={handleCurChange} />}
         </View>
       </View>
 

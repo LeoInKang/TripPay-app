@@ -13,10 +13,9 @@ export default function SetupScreen({ navigation }) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [members, setMembers] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState(null);
-  // 경유 국가. 여행 국가가 주 통화이고, 여기 더한 통화로도 지출·충전을 기록할 수 있다.
-  const [extraCurs, setExtraCurs] = useState([]);
-  const [addingCur, setAddingCur] = useState(null);
+  // 거쳐 가는 나라를 한 번에 고른다. 첫 번째가 정산 기준 통화가 된다.
+  const [countries, setCountries] = useState([]);
+  const [picking, setPicking] = useState(false);
   const [note, setNote] = useState('');
 
   // 시작일 선택 시 종료일이 비어 있으면 다음날로 자동 설정
@@ -30,23 +29,13 @@ export default function SetupScreen({ navigation }) {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
-  const addCurrency = (c) => {
-    setAddingCur(null);
-    if (!c || !c.code) return;
-    if (c.code === selectedCountry?.code || extraCurs.some(x => x.code === c.code)) {
-      alert('이미 선택한 통화예요.');
-      return;
-    }
-    setExtraCurs([...extraCurs, c]);
-  };
-
   const handleStartDate = (v) => {
     setStartDate(v);
     if (!endDate) setEndDate(nextDay(v));
   };
 
   const handleStart = () => {
-    if (!tripName || !selectedCountry || !members) {
+    if (!tripName || !countries.length || !members) {
       alert('여행명, 국가, 참석자를 입력해 주세요.');
       return;
     }
@@ -55,9 +44,10 @@ export default function SetupScreen({ navigation }) {
       name: tripName,
       startDate,
       endDate,
-      country: selectedCountry,
-      // 첫 번째가 주 통화 — 정산 기준이라 여행 생성 후에는 바꿀 수 없다
-      currencies: [selectedCountry, ...extraCurs.filter(c => c.code !== selectedCountry.code)],
+      country: countries[0],           // 구버전 화면 호환 (대표 국가)
+      countries,                       // 거쳐 간 나라 — 통화가 겹쳐도 그대로 둔다
+      homeCode: countries[0].code,     // 정산 기준 통화. 목록 순서와 분리돼 있다
+
       members: members.split(/[,\s]+/).map(m => m.trim()).filter(Boolean),
       note,
     };
@@ -106,43 +96,44 @@ export default function SetupScreen({ navigation }) {
             </View>
           </View>
 
-          {/* 국가 선택 — 여행 국가가 주 통화, 경유 국가는 더할 수 있다 */}
+          {/* 국가 선택 — 여러 나라를 한 번에 고른다 */}
           <View style={styles.field}>
-            <CountryPicker value={selectedCountry} onChange={setSelectedCountry} />
-          </View>
+            <Text style={styles.label}>여행 국가 (여러 곳이면 다 고르세요)</Text>
 
-          {selectedCountry && (
-            <View style={styles.field}>
-              <Text style={styles.label}>경유 국가 (선택)</Text>
-
-              {extraCurs.map((c, i) => (
-                <View key={c.code || i} style={styles.curRow}>
-                  <Text style={styles.curName}>{c.flag || '🌏'} {c.name} ({c.code})</Text>
-                  <TouchableOpacity onPress={() => setExtraCurs(extraCurs.filter(x => x.code !== c.code))} hitSlop={8}>
-                    <Text style={styles.curDel}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-
-              {addingCur === null ? (
-                <TouchableOpacity style={styles.btnAddCur} onPress={() => setAddingCur(undefined)} activeOpacity={0.8}>
-                  <Text style={styles.btnAddCurText}>+ 경유 국가 추가</Text>
+            {countries.map((c, i) => (
+              <View key={(c.code || '') + c.name + i} style={styles.curRow}>
+                <Text style={styles.curName}>{c.flag || '🌏'} {c.name}</Text>
+                <Text style={styles.curCode}>{c.code} {c.sym}</Text>
+                <TouchableOpacity onPress={() => setCountries(countries.filter((_, j) => j !== i))} hitSlop={8}>
+                  <Text style={styles.curDel}>✕</Text>
                 </TouchableOpacity>
-              ) : (
-                <View style={{ marginTop: 8 }}>
-                  <CountryPicker value={addingCur} onChange={addCurrency} label="추가할 국가" />
-                  <TouchableOpacity onPress={() => setAddingCur(null)} hitSlop={8}>
-                    <Text style={styles.curCancel}>취소</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              </View>
+            ))}
 
-              <Text style={styles.hint}>
-                여러 나라를 거치면 여기서 더하세요. 지출·충전을 통화별로 기록합니다.{'\n'}
-                {selectedCountry.code}가 정산 기준(주 통화)이고, 나중에 설정에서도 더할 수 있어요.
+            <TouchableOpacity style={styles.btnAddCur} onPress={() => setPicking(true)} activeOpacity={0.8}>
+              <Text style={styles.btnAddCurText}>
+                {countries.length ? '+ 국가 더 고르기' : '+ 국가 선택'}
               </Text>
-            </View>
-          )}
+            </TouchableOpacity>
+
+            {picking && (
+              <CountryPicker
+                multi
+                openNow
+                value={countries}
+                onChange={setCountries}
+                onClose={() => setPicking(false)}
+                title="여행 국가 선택 (여러 개 가능)"
+              />
+            )}
+
+            {countries.length > 1 && (
+              <Text style={styles.hint}>
+                지출·충전을 통화별로 기록합니다. 통화가 같은 나라는 하나로 묶여요.{'\n'}
+                {countries[0].code}가 정산 기준입니다.
+              </Text>
+            )}
+          </View>
 
           {/* 참석자 */}
           <View style={styles.field}>
@@ -201,6 +192,7 @@ const styles = StyleSheet.create({
     borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', marginBottom: 6,
   },
   curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
+  curCode: { fontSize: 12, color: '#9b9b9b', marginRight: 10 },
   curDel: { fontSize: 14, color: '#E24B4A', paddingHorizontal: 6 },
   btnAddCur: {
     paddingVertical: 10, borderRadius: 10,

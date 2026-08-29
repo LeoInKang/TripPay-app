@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
 import Segment     from '../../components/Segment';
-import CurrencyChips from '../../components/CurrencyChips';
+import CurrencyPicker from '../../components/CurrencyPicker';
 import KeyboardAvoider from '../../components/KeyboardAvoider';
 import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
@@ -252,11 +252,6 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
   );
 }
 
-// 통화 선택 컨트롤. 개수가 늘면 Segment가 뭉개지므로 가로 스크롤 칩으로 바꾼다.
-function CurSelect(props) {
-  return props.options.length > 3 ? <CurrencyChips {...props} /> : <Segment {...props} />;
-}
-
 // 외화 지출 한 건의 통화 기호 (cur 가 없으면 주 통화)
 function _symOfExp(item, trip, fallback) {
   const list = tripCurrencies(trip);
@@ -356,12 +351,12 @@ function EditExpenseModal({ item, trip, sym, payMethods, members, onClose, onSav
             {/* 2줄: 통화 */}
             <View style={styles.formRow}>
               <View style={styles.col}>
-                <CurSelect
+                <CurrencyPicker
                   label="통화"
                   value={cur}
                   options={[
-                    ...curList.map(c => ({ value: c.code, label: multi ? `${c.code} ${c.sym}` : `외화 ${c.sym}` })),
-                    { value: 'KRW', label: multi ? 'KRW ₩' : '원화 ₩' },
+                    ...curList.map(c => ({ value: c.code, label: multi ? c.code : `외화 ${c.sym}` })),
+                    { value: 'KRW', label: multi ? 'KRW' : '원화 ₩' },
                   ]}
                   onChange={(v) => {
                     if (v === cur) return;

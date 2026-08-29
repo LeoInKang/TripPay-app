@@ -4,8 +4,7 @@ import {
   StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import BottomSheet from '../../components/BottomSheet';
-import Segment     from '../../components/Segment';
-import CurrencyChips from '../../components/CurrencyChips';
+import CurrencyPicker from '../../components/CurrencyPicker';
 import DateField   from '../../components/DateField';
 import { fmtInt, fmtDec, toNum } from '../../format';
 import { tripCurrencies, primaryCode, codeOfDeposit } from '../../currency';
@@ -45,9 +44,11 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   const toKrwLocal = (v) => (avgRate > 0 ? Math.round((v * avgRate) / (curObj.r100 ? 100 : 1)) : 0);
 
   const memberOptions = trip.members.map(m => ({ value: m, label: m }));
+  // 코드에 심볼을 덧붙이면 CHF처럼 둘이 같은 통화가 'CHF CHF'로 겹친다.
+  // 심볼은 옆 금액 칸 라벨에 이미 있다.
   const currencyOptions = [
-    { value: 'KRW', label: multiCur ? 'KRW ₩' : '원화 ₩' },
-    ...curList.map(c => ({ value: c.code, label: multiCur ? `${c.code} ${c.sym}` : `외화 ${c.sym}` })),
+    { value: 'KRW', label: multiCur ? 'KRW' : '원화 ₩' },
+    ...curList.map(c => ({ value: c.code, label: multiCur ? c.code : `외화 ${c.sym}` })),
   ];
 
   const handleAmtChange = (v) => {
@@ -165,7 +166,8 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
           )}
         </View>
 
-        {/* 1줄: 참석자(바텀시트) | 통화(세그먼트) | 회비(입력) */}
+        {/* 1줄: 참석자(바텀시트) | 통화 | 회비(입력).
+            통화가 여럿이면 세 칸으로는 좁아 글자가 접히므로 통화만 아래 줄로 내린다. */}
         <View style={styles.formRow}>
           <View style={styles.col}>
             <BottomSheet
@@ -176,11 +178,11 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
               title="참석자 선택"
             />
           </View>
-          <View style={[styles.col, { flex: 1.3 }]}>
-            {currencyOptions.length > 3
-              ? <CurrencyChips label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />
-              : <Segment label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />}
-          </View>
+          {!multiCur && (
+            <View style={[styles.col, { flex: 1.3 }]}>
+              <CurrencyPicker label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />
+            </View>
+          )}
           <View style={styles.col}>
             <Text style={styles.label}>{currency === 'KRW' ? '회비(원)' : `회비(${sym})`}</Text>
             <TextInput
@@ -192,6 +194,14 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
             />
           </View>
         </View>
+
+        {multiCur && (
+          <View style={styles.formRow}>
+            <View style={styles.col}>
+              <CurrencyPicker label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />
+            </View>
+          </View>
+        )}
 
 
         {/* 2줄: 날짜(캘린더) | 메모 */}

@@ -4,8 +4,7 @@ import {
   StyleSheet, ScrollView, Platform, Alert
 } from 'react-native';
 import DateField from '../../components/DateField';
-import Segment from '../../components/Segment';
-import CurrencyChips from '../../components/CurrencyChips';
+import CurrencyPicker from '../../components/CurrencyPicker';
 import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
 import { tripCurrencies, primaryCode, codeOfRecord } from '../../currency';
 
@@ -40,13 +39,11 @@ function useFormCurrency(trip, lastCur, setLastCur) {
 
 function CurrencyPick({ c }) {
   if (!c.multi) return null;
-  const options = c.list.map(x => ({ value: x.code, label: `${x.code} ${x.sym}` }));
+  const options = c.list.map(x => ({ value: x.code, label: x.code }));
   return (
     <View style={styles.formRow}>
       <View style={styles.col}>
-        {options.length > 3
-          ? <CurrencyChips label="통화" value={c.cur} options={options} onChange={c.setCur} />
-          : <Segment label="통화" value={c.cur} options={options} onChange={c.setCur} />}
+        <CurrencyPicker label="통화" value={c.cur} options={options} onChange={c.setCur} />
       </View>
     </View>
   );

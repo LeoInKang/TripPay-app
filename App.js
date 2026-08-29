@@ -35,7 +35,10 @@ function LandingScreen({ navigation }) {
       initialDeposits:  SAMPLE_DEPOSITS,
       initialCharges:   SAMPLE_CHARGES,
       initialExchanges: SAMPLE_EXCHANGES,
+      initialAtms:      [],
+      initialRefunds:   [],
       initialExpenses:  SAMPLE_EXPENSES,
+      initialKrwExps:   [],
     });
   };
 
@@ -131,24 +134,33 @@ export default function App() {
     );
   }
 
-  const resumeParams = resume ? {
-    trip: resume.trip,
-    initialDeposits:  resume.deposits  || [],
-    initialCharges:   resume.charges   || [],
-    initialExchanges: resume.exchanges || [],
-    initialAtms:      resume.atms      || [],
-    initialRefunds:   resume.refunds   || [],
-    initialExpenses:  resume.expenses  || [],
-    initialKrwExps:   resume.krwExps   || [],
+  // 복원한 여행은 처음 띄우는 라우트 하나에만 실어 보낸다.
+  // initialParams 로 주면 안 된다 — Main 으로 들어올 때마다 병합돼서,
+  // 새 여행 시작처럼 trip 만 넘기는 진입에 옛 여행의 내역이 그대로 딸려 들어간다.
+  const initialState = resume ? {
+    index: 0,
+    routes: [{
+      name: 'Main',
+      params: {
+        trip: resume.trip,
+        initialDeposits:  resume.deposits  || [],
+        initialCharges:   resume.charges   || [],
+        initialExchanges: resume.exchanges || [],
+        initialAtms:      resume.atms      || [],
+        initialRefunds:   resume.refunds   || [],
+        initialExpenses:  resume.expenses  || [],
+        initialKrwExps:   resume.krwExps   || [],
+      },
+    }],
   } : undefined;
 
   return (
     <SafeAreaProvider>
-    <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={resume ? 'Main' : 'Landing'}>
+    <NavigationContainer initialState={initialState}>
+      <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Landing">
         <Stack.Screen name="Landing" component={LandingScreen} />
         <Stack.Screen name="Setup"   component={SetupScreen} />
-        <Stack.Screen name="Main"    component={MainScreen} initialParams={resumeParams} />
+        <Stack.Screen name="Main"    component={MainScreen} />
         <Stack.Screen name="History" component={HistoryScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Help" component={HelpScreen} />

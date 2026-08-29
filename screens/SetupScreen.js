@@ -54,9 +54,20 @@ export default function SetupScreen({ navigation }) {
       members: members.split(/[,\s]+/).map(m => m.trim()).filter(Boolean),
       note,
     };
+    // 새 여행은 빈 상태다. 여덟 칸을 모두 명시해서 넘긴다 —
+    // 빠뜨린 칸은 화면 기본값이 아니라 직전 여행의 값으로 채워질 수 있다.
     navigation.reset({
       index: 0,
-      routes: [{ name: 'Main', params: { trip } }],
+      routes: [{ name: 'Main', params: {
+        trip,
+        initialDeposits:  [],
+        initialCharges:   [],
+        initialExchanges: [],
+        initialAtms:      [],
+        initialRefunds:   [],
+        initialExpenses:  [],
+        initialKrwExps:   [],
+      } }],
     });
   };
 

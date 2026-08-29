@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform, Alert } from 'react-native';
 import { shareTrip, revokeShare, SHARE_TTL_DAYS } from '../../share';
-import { computeSettlement, getAvgRate, makeToKrw, expenseKrw } from '../../settle';
-import { PAY_CASH, PAY_CREDIT } from '../../constants';
+import { computeSettlement, makeToKrwMulti, getAvgRates } from '../../settle';
+import { computeBalances } from '../../balances';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -12,64 +12,47 @@ function notify(msg) {
   }
 }
 
+// 잔액 한 줄 + 인당 값. 통화가 하나면 종전 모양 그대로, 여럿이면 통화 코드를 앞에 붙인다.
+function BalLine({ c, value, n, multi }) {
+  const color = value < 0 ? '#E24B4A' : '#1D9E75';
+  return (
+    <View style={multi ? styles.balLineMulti : null}>
+      <View style={styles.balLineTop}>
+        {multi && <Text style={styles.balCode}>{c.code}</Text>}
+        <Text style={[styles.subValue, { color }]}>{c.sym}{value.toLocaleString('ko-KR')}</Text>
+      </View>
+      <Text style={styles.subPer}>인당 {c.sym}{Math.round(value / n).toLocaleString('ko-KR')}</Text>
+    </View>
+  );
+}
+
 export default function SettleTab({ trip, setTrip, deposits, charges, exchanges, atms, refunds, expenses, krwExps }) {
-  const sym  = trip.country.sym;
-  const r100 = trip.country.r100;
   const members = trip.members;
   const N = members.length || 1;
 
-  // 평균 환율 (settle.js 단일 출처)
-  const avgRate = getAvgRate(trip, charges, exchanges);
-  const toKrw = makeToKrw(avgRate, r100);
+  // 환산·잔액은 단일 출처를 쓴다 (settle.js / balances.js). 화면에서 다시 계산하지 않는다.
+  const toKrw = makeToKrwMulti(trip, charges, exchanges);
+  const bal = computeBalances({
+    trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps, toKrw,
+  });
+  const {
+    byCurrency, acctBal, creditKrw, pendingCnt,
+    totalDepKrw: totalDeposit, totalFxKrw, totalKrwExp, totalExpKrw,
+    hasNegative, multi,
+  } = bal;
+  const primary = byCurrency[0] || { sym: '', cardBal: 0, cashBal: 0, fxAmt: 0 };
 
-  // --- 총 입금 (원화환산) ---
-  const totalDeposit = deposits.reduce((s, d) =>
-    s + (d.cur === 'LOCAL' ? toKrw(d.amt || 0) : (d.krwEquiv || d.amt || 0)), 0);
-
-  // --- 총 지출 (원화환산) ---
-  const totalFxAmt    = expenses.reduce((s, e) => s + e.amt, 0);
-  // 건별 환산 합 (참석자 부담 합계와 동일 기준)
-  const totalFxKrw    = expenses.reduce((s, e) => s + expenseKrw(e, toKrw), 0);
-  const totalKrwExp   = krwExps.reduce((s, e) => s + e.amt, 0);
-  const totalExpKrw   = totalFxKrw + totalKrwExp;
-
-  // --- 카드(트래블카드) 잔액 ---
-  // 신용카드는 카드 잔액이 아니라 계좌에서 빠지므로 제외한다.
-  // 결제수단이 비어 있는 구버전 데이터는 종전대로 카드 결제로 본다.
-  const cardCharged = charges.reduce((s,c) => s+c.local, 0);
-  const cardRefund  = (refunds||[]).reduce((s,r) => s+r.local, 0);
-  const cardAtm     = (atms||[]).reduce((s,a) => s+a.local, 0);
-  const cardSpent   = expenses.filter(e => e.pay !== PAY_CASH && e.pay !== PAY_CREDIT).reduce((s,e) => s+e.amt, 0);
-  const cardBal     = cardCharged - cardSpent - cardRefund - cardAtm;
-
-  // --- 신용카드 (계좌 차감 · 확정 대기 안내용) ---
-  const creditExps  = expenses.filter(e => e.pay === PAY_CREDIT);
-  const creditKrw   = creditExps.reduce((s,e) => s+expenseKrw(e, toKrw), 0);
-  const pendingCnt  = creditExps.filter(e => !(e.krwActual > 0)).length;
-
-  // --- 현금 잔액 ---
-  const localDeps   = deposits.filter(d => d.cur === 'LOCAL').reduce((s,d) => s+(d.amt||0), 0);
-  const cashIn      = exchanges.reduce((s,e) => s+e.local, 0) + cardAtm + localDeps;
-  const cashSpent   = expenses.filter(e => e.pay === PAY_CASH).reduce((s,e) => s+e.amt, 0);
-  const cashBal     = cashIn - cashSpent;
-
-  // --- 계좌 잔액 (원화) ---
-  const totalKrwDep   = deposits.filter(d => d.cur !== 'LOCAL').reduce((s,d) => s+(d.krwEquiv||d.amt||0), 0);
-  const totalChargedKrw = charges.reduce((s,c) => s+c.krw, 0);
-  const totalExchangedKrw = exchanges.reduce((s,e) => s+e.krw, 0);
-  const refundKrw     = (refunds||[]).reduce((s,r) => s+(r.krw||0), 0);
-  const acctBal       = totalKrwDep - totalChargedKrw - totalExchangedKrw - totalKrwExp - creditKrw + refundKrw;
-
-  const hasNegative = acctBal < 0 || cardBal < 0 || cashBal < 0;
-
-  // --- 인당 분배값 (각 잔액별) ---
-  // 개인별 정산은 아래 computeSettlement가 하고, 이 값들은 잔액 카드의 참고 표시용이다.
+  // 인당 분배값은 잔액 카드의 참고 표시용이다. 개인별 정산은 computeSettlement가 한다.
   const perAcct = Math.round(acctBal / N);
-  const perCard = Math.round(cardBal / N);
-  const perCash = Math.round(cashBal / N);
+
+  // 통화별 평균환율 안내
+  const rates = getAvgRates(trip, charges, exchanges);
+  const rateLines = byCurrency
+    .filter(c => (rates[c.code] || 0) > 0)
+    .map(c => `평균 환율: ${c.cur && c.cur.r100 ? '100' : '1'}${c.sym} = ${rates[c.code].toFixed(2)}원`);
 
   // 개인별 정산 (선결제·참여자·분담방식 반영)
-  const { perMember } = computeSettlement({ members, deposits, expenses, krwExps, avgRate, r100 });
+  const { perMember } = computeSettlement({ members, deposits, expenses, krwExps, trip, toKrw });
 
   const [sharing, setSharing] = useState(false);
   const [revoking, setRevoking] = useState(false);
@@ -86,7 +69,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
     try {
       const { url, method, id, token, expiresAt } = await shareTrip({
         trip, deposits, expenses, krwExps,
-        balance: { avgRate, acctBal, cardBal, cashBal },
+        balance: { acctBal, byCurrency: byCurrency.map(c => ({ code: c.code, sym: c.sym, cardBal: c.cardBal, cashBal: c.cashBal })) },
       });
       // 만료 정리·공유 취소에 쓰려면 링크를 어디에 만들었는지 남겨야 한다
       if (setTrip) setTrip({ ...trip, share: { id, token, expiresAt } });
@@ -201,10 +184,9 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
           </View>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>트래블카드 잔액</Text>
-            <Text style={[styles.subValue, { color: cardBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
-              {sym}{cardBal.toLocaleString('ko-KR')}
-            </Text>
-            <Text style={styles.subPer}>인당 {sym}{perCard.toLocaleString('ko-KR')}</Text>
+            {byCurrency.map(c => (
+              <BalLine key={'card-' + c.code} c={c} value={c.cardBal} n={N} multi={multi} />
+            ))}
           </View>
         </View>
 
@@ -212,10 +194,9 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>현금 잔액</Text>
-            <Text style={[styles.subValue, { color: cashBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
-              {sym}{cashBal.toLocaleString('ko-KR')}
-            </Text>
-            <Text style={styles.subPer}>인당 {sym}{perCash.toLocaleString('ko-KR')}</Text>
+            {byCurrency.map(c => (
+              <BalLine key={'cash-' + c.code} c={c} value={c.cashBal} n={N} multi={multi} />
+            ))}
           </View>
           <View style={[styles.subCard, { backgroundColor: 'transparent' }]} />
         </View>
@@ -263,12 +244,12 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
         </View>
       </View>
 
-      {/* 평균 환율 */}
-      {avgRate > 0 && (
+      {/* 평균 환율 — 통화별로 한 줄씩 */}
+      {rateLines.length > 0 && (
         <View style={styles.rateCard}>
-          <Text style={styles.rateText}>
-            평균 환율: {r100 ? '100' : '1'}{sym} = {avgRate.toFixed(2)}원
-          </Text>
+          {rateLines.map(line => (
+            <Text key={line} style={styles.rateText}>{line}</Text>
+          ))}
         </View>
       )}
 
@@ -277,6 +258,9 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
 }
 
 const styles = StyleSheet.create({
+  balLineMulti: { marginTop: 4 },
+  balLineTop: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  balCode: { fontSize: 11, color: '#6b6b6b' },
   container: { flex: 1, backgroundColor: '#f0eee8' },
   content: { padding: 12, paddingBottom: 32 },
 

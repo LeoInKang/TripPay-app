@@ -270,10 +270,20 @@ export default function SettingsScreen({ route, navigation }) {
           {countries.map((c, i) => (
             <View key={(c.code || '') + c.name + i} style={styles.curRow}>
               <View style={styles.curMove}>
-                <TouchableOpacity onPress={() => moveCountry(i, -1)} disabled={i === 0} hitSlop={6}>
+                <TouchableOpacity
+                  style={styles.curArrowBtn}
+                  onPress={() => moveCountry(i, -1)}
+                  disabled={i === 0}
+                  hitSlop={{ top: 6, bottom: 2, left: 10, right: 10 }}
+                >
                   <Text style={[styles.curArrow, i === 0 && styles.curArrowOff]}>▲</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => moveCountry(i, 1)} disabled={i === countries.length - 1} hitSlop={6}>
+                <TouchableOpacity
+                  style={styles.curArrowBtn}
+                  onPress={() => moveCountry(i, 1)}
+                  disabled={i === countries.length - 1}
+                  hitSlop={{ top: 2, bottom: 6, left: 10, right: 10 }}
+                >
                   <Text style={[styles.curArrow, i === countries.length - 1 && styles.curArrowOff]}>▼</Text>
                 </TouchableOpacity>
               </View>
@@ -364,13 +374,14 @@ const styles = StyleSheet.create({
 
   curRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',
+    paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
   curCode: { fontSize: 12, color: '#9b9b9b', marginRight: 10 },
-  curMove: { marginRight: 8 },
-  curArrow: { fontSize: 10, color: '#6b6b6b', lineHeight: 13 },
-  curArrowOff: { color: '#d8d8d8' },
+  curMove: { marginRight: 10 },
+  curArrowBtn: { width: 30, height: 22, alignItems: 'center', justifyContent: 'center' },
+  curArrow: { fontSize: 15, color: '#1a3a5c', lineHeight: 17 },
+  curArrowOff: { color: '#d0d0d0' },
   curBadge: { fontSize: 11, color: '#1a3a5c', backgroundColor: '#e6eefa', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   curDel: { fontSize: 14, color: '#E24B4A', paddingHorizontal: 6 },
   btnAddCur: {

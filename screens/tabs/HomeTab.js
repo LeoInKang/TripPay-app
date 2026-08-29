@@ -9,7 +9,7 @@ function CurLine({ c, value, multi }) {
   const neg = value < 0;
   if (!multi) {
     return (
-      <Text style={[styles.balValue, neg && styles.balNeg]}>
+      <Text style={[styles.balValue, styles.balPos, neg && styles.balNeg]}>
         {c.sym}{value.toLocaleString('ko-KR')}
       </Text>
     );
@@ -17,7 +17,7 @@ function CurLine({ c, value, multi }) {
   return (
     <View style={styles.curLine}>
       <Text style={styles.curCode}>{c.code}</Text>
-      <Text style={[styles.balValue, neg && styles.balNeg]}>{value.toLocaleString('ko-KR')}</Text>
+      <Text style={[styles.balValue, styles.balPos, neg && styles.balNeg]}>{value.toLocaleString('ko-KR')}</Text>
     </View>
   );
 }
@@ -74,7 +74,7 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
           <Text style={styles.balLabel}>총 지출 (원화환산)</Text>
           {/* 원화를 주 숫자로 두고 외화 합계는 부제로 내린다 (정산 탭과 같은 기준).
               통화가 여럿이면 외화끼리 더할 수 없으므로 부제를 생략한다. */}
-          <Text style={styles.sumValue}>{totalExpKrw.toLocaleString('ko-KR')}원</Text>
+          <Text style={[styles.sumValue, styles.sumValueOut]}>{totalExpKrw.toLocaleString('ko-KR')}원</Text>
           <Text style={styles.balSub}>
             {multi
               ? `통화 ${byCurrency.length}종`
@@ -87,7 +87,7 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
       <View style={styles.balRow}>
         <View style={styles.balCard}>
           <Text style={styles.balLabel}>계좌 잔액</Text>
-          <Text style={[styles.balValue, acctBal < 0 && styles.balNeg]}>{acctBal.toLocaleString('ko-KR')}원</Text>
+          <Text style={[styles.balValue, styles.balPos, acctBal < 0 && styles.balNeg]}>{acctBal.toLocaleString('ko-KR')}원</Text>
           <Text style={styles.balSub}>충전가능</Text>
         </View>
         <View style={styles.balCard}>
@@ -219,6 +219,8 @@ const styles = StyleSheet.create({
   balLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },
   balValue: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   balSub: { fontSize: 10, color: '#9b9b9b', marginTop: 2 },
+  // 잔액·총 지출 색은 정산 탭과 같다 (남은 돈 초록 / 모자라거나 나간 돈 빨강)
+  balPos: { color: '#1D9E75' },
   balNeg: { color: '#E24B4A' },
   curLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, marginTop: 2 },
   curCode: { fontSize: 10, color: '#6b6b6b' },
@@ -226,6 +228,7 @@ const styles = StyleSheet.create({
   sumCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' },
   // 정산 탭의 같은 카드와 크기를 맞춘다
   sumValue: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginTop: 2 },
+  sumValueOut: { color: '#E24B4A' },
   listCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14 },
   listTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 12 },
   empty: { color: '#9b9b9b', fontSize: 13, textAlign: 'center', padding: 20 },

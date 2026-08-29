@@ -317,7 +317,8 @@ const styles = StyleSheet.create({
   },
   subLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },
   subValue: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
-  subValueLg: { fontSize: 20, fontWeight: '800', color: '#1a1a1a' },
+  // 20은 카드 밖으로 튀어 보였다. 옆 잔액(14)보다 한 단계만 크게 둔다.
+  subValueLg: { fontSize: 16, fontWeight: '800', color: '#1a1a1a' },
   subPer: { fontSize: 10, color: '#9b9b9b', marginTop: 2 },
   subPerRight: { textAlign: 'right' },   // 금액을 오른쪽에 붙였으니 인당 값도 그 아래로 맞춘다
 

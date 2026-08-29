@@ -231,8 +231,8 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
                   {zero
                     ? '정산 완료'
                     : owe
-                      ? `🔴 ₩${Math.abs(pm.net).toLocaleString('ko-KR')} 더 내기`
-                      : `💚 ₩${pm.net.toLocaleString('ko-KR')} 돌려받기`}
+                      ? `🔴 ${Math.abs(pm.net).toLocaleString('ko-KR')}원 더 내기`
+                      : `💚 ${pm.net.toLocaleString('ko-KR')}원 돌려받기`}
                 </Text>
               </View>
             </View>

@@ -33,8 +33,14 @@ export function tripCurrencies(trip) {
   return out;
 }
 
-// 정산 기준 통화. 목록 순서와 분리돼 있어 나라를 위아래로 옮겨도 정산은 흔들리지 않는다.
-// homeCode가 없는 구버전은 종전대로 첫 통화(= trip.country)를 앵커로 본다.
+// 통화가 안 적힌 기록(cur 없음)을 읽을 때 쓰는 통화.
+// 다통화 이전에 만든 여행은 기록에 통화 칸이 없었고, 그때는 여행에 통화가 하나뿐이라
+// trip.country 가 곧 통화였다. 그 기록들을 지금도 바르게 읽으려면 이 값이 있어야 한다.
+//
+// 화면에는 드러내지 않고 바꿀 수단도 두지 않는다 — 바꾸는 순간 옛 기록의 통화가
+// 통째로 달라져 정산이 조용히 어긋난다. 새 기록은 통화를 언제나 적으므로 영향을 받지 않는다.
+// 목록 순서와도 분리돼 있어 나라를 위아래로 옮겨도 흔들리지 않는다.
+// homeCode가 없는 구버전은 종전대로 첫 통화(= trip.country)를 본다.
 export function primaryCode(trip) {
   const home = trip && trip.homeCode;
   if (home) return home;
@@ -54,6 +60,13 @@ export function currencyOf(trip, code) {
   if (hit) return hit;
   const home = trip && trip.homeCode;
   return (home && list.find(c => c && c.code === home)) || list[0] || null;
+}
+
+// 화면에서 처음 골라 둘 통화. 목록 맨 앞이다.
+// 정산 기준(primaryCode)과는 다르다 — 그쪽은 통화가 안 적힌 옛 기록을 읽을 때만 쓴다.
+export function defaultCode(trip) {
+  const first = tripCurrencies(trip)[0];
+  return (first && first.code) || '';
 }
 
 // 기록 한 건의 통화 코드. cur 가 없으면 주 통화.
@@ -76,9 +89,9 @@ export function filterByCurrency(items, trip, code) {
 }
 
 // 통화를 여행에서 뺄 수 있는지. 기록이 하나라도 있으면 못 뺀다 (참석자 삭제 규칙과 같다).
-// 주 통화는 언제나 못 뺀다.
+// 기록이 없으면 어느 통화든 뺄 수 있다 — 마지막 하나만 남기는 건 화면이 막는다.
 export function currencyHasData(trip, code, data = {}) {
-  if (!code || code === primaryCode(trip)) return true;  // 앵커 통화는 뺄 수 없다
+  if (!code) return true;
   const { expenses = [], charges = [], exchanges = [], atms = [], refunds = [], deposits = [] } = data;
   const used = (arr) => arr.some(i => codeOfRecord(i, trip) === code);
   return used(expenses) || used(charges) || used(exchanges) || used(atms) || used(refunds)

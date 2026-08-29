@@ -6,7 +6,7 @@ import {
 import DateField from '../../components/DateField';
 import CurrencyPicker from '../../components/CurrencyPicker';
 import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
-import { tripCurrencies, primaryCode, codeOfRecord } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfRecord } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -19,7 +19,7 @@ function notify(msg) {
 // 폼의 통화 상태. 통화가 하나뿐이면 선택 UI를 숨기고 주 통화를 그대로 쓴다.
 function useFormCurrency(trip, lastCur, setLastCur) {
   const list = tripCurrencies(trip);
-  const home = primaryCode(trip);
+  const home = defaultCode(trip);   // 처음 골라 둘 통화
   // 마지막에 쓴 통화로 시작한다 (원화는 충전·환전에 없으므로 외화만 이어받는다)
   const start = lastCur && lastCur !== 'KRW' && list.some(c => c.code === lastCur) ? lastCur : home;
   const [cur, setCurRaw] = useState(start);
@@ -32,8 +32,7 @@ function useFormCurrency(trip, lastCur, setLastCur) {
     sym: obj.sym || '',
     r100: !!obj.r100,
     exRate: obj.exRate,
-    // 주 통화면 필드를 두지 않는다 — 저장 모양이 구버전과 같아진다
-    field: cur !== home ? { cur } : {},
+    field: { cur },   // 통화는 항상 적는다
   };
 }
 

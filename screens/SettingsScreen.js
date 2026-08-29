@@ -32,7 +32,7 @@ export default function SettingsScreen({ route, navigation }) {
   const [memberRows, setMemberRows] = useState((trip?.members || []).map(m => ({ orig: m, name: m })));
   const [newMember, setNewMember] = useState('');
   // 거쳐 간 나라 목록. 통화가 겹쳐도 그대로 둔다(이탈리아·프랑스).
-  // 순서는 표시용이라 자유롭게 옮길 수 있다 — 정산 기준은 homeCode가 따로 들고 있다.
+  // 순서는 표시용이라 자유롭게 옮길 수 있다 (입력할 때 맨 앞 통화가 먼저 골라진다).
   const [countries, setCountries] = useState(() => tripCountries(trip));
   const [picking, setPicking] = useState(false);
   // 순서를 끄는 동안에는 화면 스크롤을 잠근다 (안 그러면 ScrollView가 터치를 가로챈다)
@@ -55,6 +55,10 @@ export default function SettingsScreen({ route, navigation }) {
   // 같은 통화를 쓰는 다른 나라는 뺄 수 있다 — 그 통화를 쓰는 나라가 하나도 안 남을 때만 막는다.
   const removeCountry = (i) => {
     const gone = countries[i];
+    if (countries.length <= 1) {
+      notify('여행 국가는 하나 이상 있어야 해요.');
+      return;
+    }
     const stillUsed = countries.some((c, j) => j !== i && c.code === gone.code);
     if (!stillUsed && currencyHasData(trip, gone.code, tripData)) {
       notify(`${gone.code}로 기록된 내역이 있어서 뺄 수 없어요.\n내역을 지우거나 통화를 바꾼 뒤 다시 시도해 주세요.`);
@@ -132,7 +136,8 @@ export default function SettingsScreen({ route, navigation }) {
       note,
       members: names,
       countries,
-      // 정산 기준은 목록 순서와 무관하게 유지한다. 순서를 바꿔도 정산이 흔들리지 않는다.
+      // homeCode는 통화가 안 적힌 옛 기록을 읽는 기준이라 손대지 않고 그대로 넘긴다.
+      // 바꾸면 그 기록들의 통화가 통째로 달라진다 (currency.js primaryCode 주석 참조).
       homeCode,
     };
     const renamedOld = (trip?.members || []).map(m => renames[m] || m);
@@ -270,7 +275,8 @@ export default function SettingsScreen({ route, navigation }) {
             renderRow={(c, i) => (
               <>
                 <Text style={styles.curName}>{c.flag || '🌏'} {c.name || ''}</Text>
-                <Text style={styles.curCode}>{c.code} {c.sym}</Text>
+                {/* 심볼이 코드와 같은 통화가 있다(CHF). 다를 때만 덧붙인다. */}
+                <Text style={styles.curCode}>{c.sym && c.sym !== c.code ? `${c.code} ${c.sym}` : c.code}</Text>
                 <TouchableOpacity onPress={() => removeCountry(i)} hitSlop={10}>
                   <Text style={styles.curDel}>✕</Text>
                 </TouchableOpacity>
@@ -294,8 +300,8 @@ export default function SettingsScreen({ route, navigation }) {
           )}
 
           <Text style={styles.infoHint}>
-            왼쪽 손잡이를 끌어 순서를 바꿀 수 있어요. 통화가 같은 나라는 지출 입력에서 하나로 묶입니다.{'\n'}
-            정산 기준은 {homeCode}이고 순서를 바꿔도 달라지지 않아요. 기록이 있는 통화는 뺄 수 없습니다.
+            왼쪽 손잡이를 끌어 순서를 바꿀 수 있어요. 맨 앞 통화가 입력할 때 먼저 골라집니다.{'\n'}
+            통화가 같은 나라는 지출 입력에서 하나로 묶입니다. 기록이 있는 통화는 뺄 수 없습니다.
           </Text>
         </View>
 

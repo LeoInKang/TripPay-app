@@ -7,7 +7,7 @@ import BottomSheet from '../../components/BottomSheet';
 import CurrencyPicker from '../../components/CurrencyPicker';
 import DateField   from '../../components/DateField';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, primaryCode, codeOfDeposit } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfDeposit } from '../../currency';
 import { getAvgRates } from '../../settle';
 
 function notify(msg) {
@@ -33,7 +33,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
 
   // 통화 선택지 = 원화 + 여행의 외화들. 통화가 하나면 종전처럼 '원화 / 외화' 두 개다.
   const curList = tripCurrencies(trip);
-  const home = primaryCode(trip);
+  const home = defaultCode(trip);   // 처음 골라 둘 통화
   const multiCur = curList.length > 1;
   const curObj = curList.find(c => c.code === currency) || curList[0] || {};
   const sym = curObj.sym || '';

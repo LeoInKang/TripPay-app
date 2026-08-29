@@ -9,7 +9,7 @@ import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, primaryCode } from '../../currency';
+import { tripCurrencies, defaultCode } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -50,9 +50,8 @@ export default function AddTab({ trip, expenses, krwExps, setExpenses, setKrwExp
 function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps, lastCur, setLastCur }) {
   // 통화 선택지 = 여행의 외화들 + 원화. 통화가 하나면 종전처럼 '외화 / 원화' 두 개다.
   const curList = tripCurrencies(trip);
-  const home = primaryCode(trip);
-
-  const [cur,   setCur]   = useState(lastCur || home);   // 통화코드 | 'KRW'
+  // 처음 골라 둘 통화는 목록 맨 앞 (직전에 쓴 통화가 있으면 그것)
+  const [cur,   setCur]   = useState(lastCur || defaultCode(trip));   // 통화코드 | 'KRW'
   const [name,  setName]  = useState('');
   const [amt,   setAmt]   = useState('');
   const [pay,   setPay]   = useState(PAY_METHODS[0]);
@@ -102,7 +101,7 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps, lastCur
         pay,
         date,
         note,
-        ...(cur !== home ? { cur } : {}),
+        cur,                                   // 기준 통화라도 생략하지 않는다 (아래 주석 참조)
         ...(showKrwActual && actual > 0 ? { krwActual: actual } : {}),
         ...(splitVal || {}),
       }]);

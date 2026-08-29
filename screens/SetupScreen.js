@@ -125,7 +125,8 @@ export default function SetupScreen({ navigation }) {
               renderRow={(c, i) => (
                 <>
                   <Text style={styles.curName}>{c.flag || '🌏'} {c.name}</Text>
-                  <Text style={styles.curCode}>{c.code} {c.sym}</Text>
+                  {/* 심볼이 코드와 같은 통화가 있다(CHF). 다를 때만 덧붙인다. */}
+                  <Text style={styles.curCode}>{c.sym && c.sym !== c.code ? `${c.code} ${c.sym}` : c.code}</Text>
                   <TouchableOpacity onPress={() => setCountries(countries.filter((_, j) => j !== i))} hitSlop={10}>
                     <Text style={styles.curDel}>✕</Text>
                   </TouchableOpacity>

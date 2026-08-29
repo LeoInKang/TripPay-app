@@ -13,7 +13,7 @@ import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, primaryCode, codeOfRecord } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfRecord } from '../../currency';
 
 export default function ListTab({ trip, charges = [], exchanges = [], expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
@@ -269,7 +269,7 @@ function EditExpenseModal({ item, trip, sym, payMethods, members, onClose, onSav
   // 통화는 수정에서 바꿀 수 있다. 바꾸면 저장 시 지출이 반대쪽 목록으로 옮겨간다
   // (외화는 expenses, 원화는 krwExps). 입력 기본값이 외화라 실수 여지가 있어 넣었다.
   const curList = tripCurrencies(trip);
-  const home = primaryCode(trip);
+  const home = defaultCode(trip);   // 처음 골라 둘 통화
   const multi = curList.length > 1;
   const [cur, setCur]     = useState(home);
   const [date, setDate]   = useState('');
@@ -315,7 +315,7 @@ function EditExpenseModal({ item, trip, sym, payMethods, members, onClose, onSav
       amt: num,
       pay,                                   // 원화도 분류용으로 저장한다
       krwActual: isFx ? Math.round(toNum(krwActual)) : 0,
-      cur: isFx && cur !== home ? cur : undefined,
+      cur: isFx ? cur : undefined,           // 외화면 통화를 항상 적는다
       date,
       note,
       participants: splitVal ? splitVal.participants : undefined,

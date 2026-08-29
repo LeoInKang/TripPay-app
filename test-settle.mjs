@@ -366,5 +366,35 @@ eq('16 금액 미입력은 통과', checkFixedSplit({ participants: ['A'], split
   eq('23 EUR는 그대로', toKrw(100, 'EUR'), 150000);
 }
 
+// 24) 기준 통화를 적어 저장해도 안 적은 옛 기록과 똑같이 읽힌다.
+//     새 기록은 통화를 늘 적으므로(화면 3곳) 이 둘이 한 여행에 섞인다.
+{
+  const CHF = { code: 'CHF', sym: 'CHF', r100: false, exRate: '1560' };
+  const EUR = { code: 'EUR', sym: '€',   r100: false, exRate: '1500' };
+  const trip = { country: CHF, currencies: [CHF, EUR], homeCode: 'CHF' };
+  const parts = ['A', 'B'];
+  const toKrw = makeToKrwMulti(trip, [], []);
+
+  const bare    = computeSettlement({ members: parts, trip, toKrw,
+    expenses: [{ name: '옛 기록', amt: 100, participants: parts }] });
+  const stamped = computeSettlement({ members: parts, trip, toKrw,
+    expenses: [{ name: '새 기록', amt: 100, cur: 'CHF', participants: parts }] });
+  eq('24 통화 생략 = 기준 통화', bare.perMember[0].owed, 78000);
+  eq('24 적어도 같은 값', stamped.perMember[0].owed, bare.perMember[0].owed);
+
+  // 회비도 마찬가지 ('LOCAL'은 구버전 값이라 기준 통화를 뜻한다)
+  const dep = computeSettlement({ members: parts, trip, toKrw,
+    deposits: [{ mem: 'A', cur: 'LOCAL', amt: 100 }, { mem: 'B', cur: 'CHF', amt: 100 }] });
+  eq('24 LOCAL 회비 = CHF 회비', dep.perMember.find(p => p.name === 'A').paidIn,
+                                 dep.perMember.find(p => p.name === 'B').paidIn);
+
+  // 나라 순서를 바꿔도 기준(homeCode)은 그대로라 옛 기록의 해석이 흔들리지 않는다
+  const flipped = { ...trip, currencies: [EUR, CHF] };
+  const after = computeSettlement({ members: parts, trip: flipped,
+    toKrw: makeToKrwMulti(flipped, [], []),
+    expenses: [{ name: '옛 기록', amt: 100, participants: parts }] });
+  eq('24 순서를 바꿔도 그대로', after.perMember[0].owed, bare.perMember[0].owed);
+}
+
 console.log(`\n== ${pass} passed, ${fail} failed ==`);
 process.exit(fail ? 1 : 0);

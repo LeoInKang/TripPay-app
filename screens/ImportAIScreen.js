@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { RECEIPT_PROMPT, parseAiJson } from '../receiptPrompt';
-import { tripCurrencies, primaryCode } from '../currency';
+import { tripCurrencies } from '../currency';
 import { migrateTripData } from '../migrate';
 import { listTrips, loadTripData, saveTripData, setCurrentTripId } from '../storage';
 
@@ -124,11 +124,8 @@ export default function ImportAIScreen({ navigation, route }) {
         notify(`통화가 달라요. 이 묶음은 ${code}인데 선택한 여행의 통화는 ${have}예요.\n설정에서 ${code}를 추가하거나 같은 통화의 여행을 골라 주세요.`);
         return;
       }
-      // 주 통화가 아니면 각 지출에 통화를 표시한다 (주 통화면 필드를 두지 않는다)
-      const targetHome = primaryCode(data.trip);
-      const stampedFx = code && code !== targetHome
-        ? newFx.map(e => ({ ...e, cur: code }))
-        : newFx;
+      // 지출에 통화를 적어 둔다. 생략하면 통화가 안 적힌 옛 기록과 구별되지 않는다.
+      const stampedFx = code ? newFx.map(e => ({ ...e, cur: code })) : newFx;
       const batches = data.trip.importedBatches || [];
       if (batches.includes(bundle.batchId)) {
         notify('이미 추가된 묶음이에요. 같은 결과를 두 번 넣지 않도록 막았어요.');

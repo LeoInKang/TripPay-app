@@ -34,6 +34,11 @@ export function migrateTripData(data) {
   if (trip && (!Array.isArray(trip.members) || trip.members.length === 0)) {
     trip = { ...trip, members: [...DEFAULT_MEMBERS] };
   }
+  // 다통화 여행: 통화 목록의 첫 항목이 주 통화다. 구버전에는 trip.country 하나뿐이라 그걸로 채운다.
+  // 기록(지출·충전 등)의 cur가 비어 있으면 주 통화로 읽으므로 저장된 데이터는 손대지 않는다.
+  if (trip && trip.country && (!Array.isArray(trip.currencies) || trip.currencies.length === 0)) {
+    trip = { ...trip, currencies: [trip.country] };
+  }
 
   if (expenses === data.expenses && krwExps === data.krwExps && trip === data.trip) return data;
   return { ...data, trip, expenses, krwExps };

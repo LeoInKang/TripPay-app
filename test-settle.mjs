@@ -1,4 +1,4 @@
-import { computeSettlement, getAvgRate, checkFixedSplit, checkRatioSplit, normalizeRatio, expenseKrw, makeToKrw } from './settle.js';
+import { computeSettlement, getAvgRate, getAvgRates, checkFixedSplit, checkRatioSplit, normalizeRatio, expenseKrw, makeToKrw, makeToKrwMulti } from './settle.js';
 
 let pass = 0, fail = 0;
 function eq(label, got, exp) {
@@ -293,6 +293,77 @@ eq('16 금액 미입력은 통과', checkFixedSplit({ participants: ['A'], split
     krwExps: [{ name: '원화', amt: 50000, krwActual: 999999, participants: parts }],
   });
   eq('21 원화 지출은 krwActual 무시', krwOnly.perMember.reduce((s, p) => s + p.owed, 0), 50000);
+}
+
+// 22) 다통화 — 한 여행에 통화가 여럿 (스위스 CHF + 이탈리아 EUR 경유 여행)
+{
+  const CHF = { code: 'CHF', sym: 'CHF', r100: false, exRate: '1560' };
+  const EUR = { code: 'EUR', sym: '€',   r100: false, exRate: '1500' };
+  const trip = { country: CHF, currencies: [CHF, EUR] };
+  const parts = ['A', 'B'];
+
+  // 통화별 충전·환전. cur 없는 건은 주 통화(CHF)로 읽힌다.
+  const charges   = [{ krw: 156000, local: 100, rate: 1560 }];              // CHF (cur 생략)
+  const exchanges = [{ krw: 150000, local: 100, rate: 1500, cur: 'EUR' }];  // EUR
+
+  const rates = getAvgRates(trip, charges, exchanges);
+  eq('22 CHF 평균환율', rates.CHF, 1560);
+  eq('22 EUR 평균환율', rates.EUR, 1500);
+
+  // 통화별 기록이 0건이면 그 통화의 기본환율로 폴백
+  const noneRates = getAvgRates(trip, [], []);
+  eq('22 CHF 폴백', noneRates.CHF, 1560);
+  eq('22 EUR 폴백', noneRates.EUR, 1500);
+
+  const toKrw = makeToKrwMulti(trip, charges, exchanges);
+  eq('22 CHF 환산', toKrw(10, 'CHF'), 15600);
+  eq('22 EUR 환산', toKrw(10, 'EUR'), 15000);
+  eq('22 코드 생략 = 주 통화', toKrw(10), 15600);
+
+  // 정산: 통화가 섞인 지출이 각자 환율로 환산돼 합산된다
+  const r = computeSettlement({
+    members: parts,
+    trip,
+    toKrw,
+    deposits: [{ mem: 'A', cur: 'KRW', amt: 100000, krwEquiv: 100000 }],
+    expenses: [
+      { name: '스위스 호텔', amt: 100, participants: parts },              // CHF 156,000
+      { name: '이탈리아 식사', amt: 100, cur: 'EUR', participants: parts }, // EUR 150,000
+    ],
+  });
+  eq('22 A 부담', r.perMember.find(p => p.name === 'A').owed, 153000);
+  eq('22 B 부담', r.perMember.find(p => p.name === 'B').owed, 153000);
+  eq('22 부담 합계 = 두 통화 환산 합', r.perMember.reduce((s, p) => s + p.owed, 0), 306000);
+  eq('22 A 순액', r.perMember.find(p => p.name === 'A').net, 100000 - 153000);
+
+  // 외화 회비도 통화별로 환산된다
+  const r2 = computeSettlement({
+    members: parts,
+    trip,
+    toKrw,
+    deposits: [{ mem: 'A', cur: 'EUR', amt: 100 }, { mem: 'B', cur: 'LOCAL', amt: 100 }],
+  });
+  eq('22 EUR 회비 환산', r2.perMember.find(p => p.name === 'A').paidIn, 150000);
+  eq('22 LOCAL 회비 = 주 통화', r2.perMember.find(p => p.name === 'B').paidIn, 156000);
+
+  // 확정 원화는 통화와 무관하게 그 건만 실효 환율을 쓴다
+  const r3 = computeSettlement({
+    members: parts,
+    trip,
+    toKrw,
+    expenses: [{ name: '이탈리아 카드', amt: 100, cur: 'EUR', krwActual: 148000, participants: parts }],
+  });
+  eq('22 확정 원화 우선', r3.perMember.reduce((s, p) => s + p.owed, 0), 148000);
+}
+
+// 23) 다통화 — r100 통화가 섞여도 통화별로 적용된다 (일본 JPY + 유럽 EUR)
+{
+  const JPY = { code: 'JPY', sym: '¥', r100: true,  exRate: '930'  };
+  const EUR = { code: 'EUR', sym: '€', r100: false, exRate: '1500' };
+  const trip = { country: JPY, currencies: [JPY, EUR] };
+  const toKrw = makeToKrwMulti(trip, [], []);
+  eq('23 JPY는 /100', toKrw(10000, 'JPY'), 93000);
+  eq('23 EUR는 그대로', toKrw(100, 'EUR'), 150000);
 }
 
 console.log(`\n== ${pass} passed, ${fail} failed ==`);

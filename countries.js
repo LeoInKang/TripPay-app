@@ -31,7 +31,10 @@ export const COUNTRIES = [
   { flag:'🇮🇱', name:'이스라엘',    code:'ILS', sym:'₪',    r100:false, exRate:'375',   region:'아시아' },
 
   // ── 유럽 ──
-  { flag:'🇪🇺', name:'유럽(유로)',  code:'EUR', sym:'€',    r100:false, exRate:'1500',  region:'유럽' },
+  { flag:'🇪🇺', name:'유럽(유로)',  code:'EUR', sym:'€',    r100:false, exRate:'1500',  region:'유럽',
+    aliases:['이탈리아','프랑스','독일','스페인','네덜란드','벨기에','오스트리아','아일랜드','포르투갈','그리스',
+             '핀란드','룩셈부르크','슬로바키아','슬로베니아','리투아니아','라트비아','에스토니아','몰타','키프로스','크로아티아',
+             '유로','유로존','euro','italy','france','germany','spain','netherlands','portugal','greece','austria','ireland'] },
   { flag:'🇬🇧', name:'영국',        code:'GBP', sym:'£',    r100:false, exRate:'1750',  region:'유럽' },
   { flag:'🇨🇭', name:'스위스',      code:'CHF', sym:'CHF',  r100:false, exRate:'1560',  region:'유럽' },
   { flag:'🇨🇿', name:'체코',        code:'CZK', sym:'Kč',   r100:false, exRate:'59',    region:'유럽' },
@@ -63,12 +66,15 @@ export const COUNTRIES = [
 // 자주 가는 국가 (선택 화면 상단 고정)
 export const POPULAR_CODES = ['JPY', 'VND', 'THB', 'USD', 'EUR', 'PHP'];
 
+// 이름·코드·기호에 더해 별칭(aliases)까지 본다.
+// 유로존 20개국은 통화가 같아 EUR 한 줄로 묶여 있는데, 사용자는 '이탈리아'처럼 나라 이름으로 찾는다.
 export function searchCountries(query) {
   const q = (query || '').trim().toLowerCase();
   if (!q) return COUNTRIES;
   return COUNTRIES.filter(c =>
     c.name.toLowerCase().includes(q) ||
     c.code.toLowerCase().includes(q) ||
-    c.sym.toLowerCase().includes(q)
+    c.sym.toLowerCase().includes(q) ||
+    (c.aliases || []).some(a => a.toLowerCase().includes(q))
   );
 }

@@ -1,4 +1,6 @@
 // settle.js — 개인별 정산 엔진 (b: 유연한 분담)
+import { tripCurrencies, primaryCode, codeOfRecord, codeOfDeposit } from './currency.js';
+
 // 순액 = 회비 − (참여한 지출의 내 몫)
 // 분담방식: equal(균등) | ratio(비율) | shares(배수) | fixed(고정액)
 // participants 없으면 전원, split 없으면 균등 (기존 데이터 호환)
@@ -9,9 +11,29 @@
 // (폴백이 없으면 충전·환전 0건인 여행에서 외화 회비가 0원으로 계산돼 순액이 뒤집힌다)
 // 화면마다 따로 계산하지 말고 반드시 이 함수를 쓸 것.
 export function getAvgRate(trip, charges = [], exchanges = []) {
+  return getAvgRates(trip, charges, exchanges)[primaryCode(trip)] ?? fallbackRate(trip?.country);
+}
+
+function fallbackRate(cur) {
+  return parseFloat(cur?.exRate) || 0;
+}
+
+// 통화별 평균환율. 여행에 통화가 여럿이면 통화마다 따로 낸다.
+// 그 통화의 충전·환전이 0건이면 그 통화의 기본환율로 폴백한다 (단일 통화 때와 같은 규칙).
+// → { CHF: 1560, EUR: 1500 }
+export function getAvgRates(trip, charges = [], exchanges = []) {
   const fx = [...(charges || []), ...(exchanges || [])];
-  if (fx.length) return fx.reduce((s, i) => s + (i.rate || 0), 0) / fx.length;
-  return parseFloat(trip?.country?.exRate) || 0;
+  const out = {};
+  for (const cur of tripCurrencies(trip)) {
+    if (!cur) continue;
+    // code가 없는 여행 데이터도 있다(구버전·테스트). 그때는 빈 코드가 주 통화 키가 된다.
+    const code = cur.code || '';
+    const mine = fx.filter((i) => codeOfRecord(i, trip) === code);
+    out[code] = mine.length
+      ? mine.reduce((s, i) => s + (i.rate || 0), 0) / mine.length
+      : fallbackRate(cur);
+  }
+  return out;
 }
 
 // 고정액 분담 검증 — 부담 합계가 지출액과 다르면 정산이 조용히 어긋나므로 저장 전에 막는다.
@@ -67,8 +89,26 @@ export function normalizeRatio(participants = [], values = {}) {
   return out;
 }
 
+// 단일 통화 환산기. 둘째 인자(통화 코드)는 무시하므로 다통화 환산기와 자리를 바꿔 끼울 수 있다.
 export function makeToKrw(avgRate, r100) {
   return (v) => (avgRate > 0 ? Math.round((v * avgRate) / (r100 ? 100 : 1)) : 0);
+}
+
+// 다통화 환산기 — (금액, 통화코드) → 원화. 코드를 생략하면 주 통화로 본다.
+// 화면·엔진 어디서든 이 하나만 쓰면 통화가 몇 개든 같은 기준으로 환산된다.
+export function makeToKrwMulti(trip, charges = [], exchanges = []) {
+  const rates = getAvgRates(trip, charges, exchanges);
+  const r100 = {};
+  for (const cur of tripCurrencies(trip)) {
+    if (cur) r100[cur.code || ''] = !!cur.r100;
+  }
+  const home = primaryCode(trip);
+  return (v, code) => {
+    const key = code || home;
+    const rate = rates[key] || 0;
+    if (rate <= 0) return 0;
+    return Math.round((v * rate) / (r100[key] ? 100 : 1));
+  };
 }
 
 // 한 외화 지출 전용 환산기.
@@ -79,7 +119,9 @@ export function makeExpToKrw(exp, toKrw) {
   const actual = Number(exp && exp.krwActual) || 0;
   const amt = Number(exp && exp.amt) || 0;
   if (actual > 0 && amt > 0) return (v) => Math.round((v * actual) / amt);
-  return toKrw;
+  // 그 지출의 통화를 환산기에 넘긴다. 단일 통화 환산기는 이 인자를 무시하므로 동작이 같다.
+  const cur = exp && exp.cur;
+  return (v) => toKrw(v, cur);
 }
 
 // 외화 지출 1건의 원화 금액 (확정 원화 우선). 잔액·합계 표시가 정산과 같은 값을 쓰도록 공용.
@@ -115,7 +157,11 @@ export function shareOfKrw(exp, member, allMembers, toKrw, isFx) {
 }
 
 // 개인별 정산 계산
-// { members, deposits, expenses, krwExps, avgRate, r100 } → { perMember, totalLeftover }
+// { members, deposits, expenses, krwExps, avgRate, r100, trip, toKrw } → { perMember, totalLeftover }
+//
+// 단일 통화: avgRate + r100 을 준다 (기존 호출부 그대로).
+// 다통화:    toKrw 에 makeToKrwMulti(trip, charges, exchanges) 를 주고, trip 도 함께 넘긴다.
+//            trip 은 외화 회비의 통화를 읽는 데만 쓴다.
 export function computeSettlement({
   members = [],
   deposits = [],
@@ -123,8 +169,10 @@ export function computeSettlement({
   krwExps = [],
   avgRate = 0,
   r100 = false,
+  trip = null,
+  toKrw: toKrwIn = null,
 }) {
-  const toKrw = makeToKrw(avgRate, r100);
+  const toKrw = toKrwIn || makeToKrw(avgRate, r100);
   const paidIn = {};
   const owed = {};
   members.forEach((m) => {
@@ -133,11 +181,13 @@ export function computeSettlement({
   });
 
   // 회비(입금). 외화 회비는 저장값이 아니라 '현재 평균환율'로 환산해 기준을 통일한다.
+  // 통화는 codeOfDeposit이 정한다 — 'KRW'는 원화, 구버전 'LOCAL'은 주 통화, 그 외는 통화 코드.
   deposits.forEach((d) => {
     if (paidIn[d.mem] == null) return;
-    paidIn[d.mem] += d.cur === 'LOCAL'
-      ? toKrw(d.amt || 0)
-      : (d.krwEquiv || d.amt || 0);
+    const code = trip ? codeOfDeposit(d, trip) : (d.cur === 'LOCAL' ? '' : 'KRW');
+    paidIn[d.mem] += code === 'KRW'
+      ? (d.krwEquiv || d.amt || 0)
+      : toKrw(d.amt || 0, code);
   });
 
   // 지출 적용 (외화 + 원화 공통 로직)

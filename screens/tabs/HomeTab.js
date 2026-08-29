@@ -223,7 +223,8 @@ const styles = StyleSheet.create({
   curCode: { fontSize: 10, color: '#6b6b6b' },
   sumRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   sumCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' },
-  sumValue: { fontSize: 13, fontWeight: '700', color: '#1a1a1a', marginTop: 2 },
+  // 정산 탭의 같은 카드와 크기를 맞춘다
+  sumValue: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginTop: 2 },
   listCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14 },
   listTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 12 },
   empty: { color: '#9b9b9b', fontSize: 13, textAlign: 'center', padding: 20 },

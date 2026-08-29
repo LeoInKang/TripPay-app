@@ -166,8 +166,17 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
           )}
         </View>
 
-        {/* 1줄: 참석자(바텀시트) | 통화 | 회비(입력).
-            통화가 여럿이면 세 칸으로는 좁아 글자가 접히므로 통화만 아래 줄로 내린다. */}
+        {/* 통화가 여럿이면 세 칸으로는 좁아 글자가 접힌다. 통화만 위로 빼서 한 줄을 다 쓴다 —
+            어느 통화로 넣는지가 금액보다 먼저 정해지므로 위가 맞다. */}
+        {multiCur && (
+          <View style={styles.formRow}>
+            <View style={styles.col}>
+              <CurrencyPicker label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />
+            </View>
+          </View>
+        )}
+
+        {/* 참석자(바텀시트) | 통화 | 회비(입력) — 통화는 하나뿐일 때만 가운데에 둔다 */}
         <View style={styles.formRow}>
           <View style={styles.col}>
             <BottomSheet
@@ -195,16 +204,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
           </View>
         </View>
 
-        {multiCur && (
-          <View style={styles.formRow}>
-            <View style={styles.col}>
-              <CurrencyPicker label="통화" value={currency} options={currencyOptions} onChange={handleCurrencyChange} />
-            </View>
-          </View>
-        )}
-
-
-        {/* 2줄: 날짜(캘린더) | 메모 */}
+        {/* 날짜(캘린더) | 메모 */}
         <View style={styles.formRow}>
           <View style={styles.col}>
             <DateField label="날짜" value={date} onChange={setDate} />

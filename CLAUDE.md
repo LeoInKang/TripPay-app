@@ -13,7 +13,13 @@ TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전
 - 공유 서버: Cloudflare Worker `https://trippay.fompy98.workers.dev` (소스 `server/`, KV `SHARES`). 계정 fompy98@gmail.com.
 - UI 언어는 **한국어 전용**. 통화 기준은 항상 **원화(KRW)**.
 
-## 현재 상태 (2026-08-17 기준)
+## 현재 상태 (2026-08-30 기준)
+- **v10(versionCode 10, 1.2.4) 빌드 완료**(2026-08-30). 내부 테스트 트랙 업로드는 Leo가 직접.
+  내용: **다통화 여행** · 새 여행에 직전 여행 기록이 복사되던 버그 수정 · 국가 드래그 정렬 · 통화 표기 전면 정리.
+  `.aab` https://expo.dev/artifacts/eas/b26zlmu-SK2FL7t8S2avHk7TpcdjeEYjS6rTn7i8zgs.aab
+  큰누나(`hl5jso58@gmail.com`)가 내부 테스터. **테스터 목록에 있어도 참여 링크에서 한 번은 수락해야 받는다** —
+  전에 참여한 건 비공개 테스트(Alpha) 트랙이고 그건 일시중지 상태다. 내부 테스트 링크
+  https://play.google.com/apps/internaltest/4701492360427740490
 - **★ 정식 출시 완료 — v9(versionCode 9, 1.2.3) 프로덕션 게시**(2026-08-22, 제출 당일 통과). 커밋 `c8833e2` 기준.
   스토어 https://play.google.com/store/apps/details?id=com.leoinkang.trippay
   첫 프로덕션 검토라 며칠 예상했으나 몇 시간 만에 끝났다.
@@ -54,28 +60,31 @@ TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전
   비공개 테스트와 달리 테스터 12명·14일 같은 조건이 없다. 참여 링크는 트랙 '테스터' 탭의 '링크 복사'에서 얻는다.
 - **한 번 빌드한 번들은 파일 없이 트랙 사이를 옮길 수 있다** — 출시 만들기의 '라이브러리에서 추가'.
   45MB `.aab`를 다시 붙이는 건 EAS에서 갓 나온 새 번들일 때뿐이다.
-- 다음 할 일: ① JSONBin 계정 삭제 회신 대기 → ② 다음 단체 여행에서 실사용 검증 → ③ 출시 후 Android vitals·리뷰 모니터링.
+- 다음 할 일: ① v10 내부 테스트 업로드 → 큰누나 다통화 피드백 → ② 프로덕션 승격 → ③ JSONBin 계정 삭제 회신 대기 → ④ Android vitals·리뷰 모니터링.
 - **아이폰은 맥북 없이 못 쓴다** — `expo-updates` 미설치이고, 설치해도 EAS Update는 Expo Go에서 동작하지 않는다(개발 빌드 필요). iOS 빌드 이력 0건이고 Apple Developer 계정($99/년)도 없다. 캐나다에서는 맥북 지참 + `npx expo start` + Expo Go가 유일한 경로. 앱스토어는 여행 후 검토.
 
 ## 구조
 ```
 App.js               Landing(시작·가져오기·히스토리) + Stack 네비게이션 + 마지막 여행 자동복원
 screens/
-  SetupScreen        새 여행 생성(여행명·기간·국가·참석자) → trip 객체 확정
+  SetupScreen        새 여행 생성(여행명·기간·국가 여러 곳·참석자) → trip 객체 확정
   MainScreen         여행 상태 보관소 + 6탭 스위처 + 자동저장 트리거
   HistoryScreen      저장된 여행 목록 열기/삭제/JSON 내보내기
-  SettingsScreen     여행명·기간·메모·참석자 편집 (국가·통화는 변경 불가) + 도움말 진입점
+  SettingsScreen     여행명·기간·메모·참석자·여행 국가 편집(추가·삭제·드래그 정렬) + 도움말 진입점
   ImportAIScreen     AI 영수증 가져오기 — 프롬프트 복사 + 클립보드 붙여넣기 → 여행 선택·미리보기·병합
   HelpScreen         도움말 — 분담방식·대납 처리 (운영 규칙의 사용자용 요약. 규칙 바뀌면 feedback-backlog.md와 함께 수정)
   tabs/  Home 현황 | Deposit 회비 | Charge 충전·환전·ATM·잔액이전 | Add 지출입력(외화·원화 통합 폼) | List 내역·수정 | Settle 정산·공유
-components/          BottomSheet · Segment · DateField(월일) · FullDateField(연월일) · CountryPicker · SplitEditor
+components/          BottomSheet · Segment · CurrencyPicker(통화 선택) · ReorderList(드래그 정렬) ·
+                     DateField(월일) · FullDateField(연월일) · CountryPicker(다중 선택) · SplitEditor
 settle.js            ★ 개인별 정산 엔진 (유일한 정산 로직 단일 출처)
+currency.js          ★ 여행의 통화 목록 단일 출처 (tripCountries·tripCurrencies·codeOfRecord·currencyLabel)
+balances.js          ★ 잔액 계산 단일 출처 (통화별 카드·현금 + 원화 계좌)
 format.js            금액 입력 표기 (fmtInt 원화 · fmtDec 외화 · toNum · trimDec). 화면 공용, 로컬 복제 금지
 storage.js           AsyncStorage CRUD (trippay:trips / trippay:currentTripId / trippay:trip:{id})
 migrate.js           읽어 들인 여행 데이터를 현재 스키마로 변환 (storage·transfer·ImportAI 세 경로에서 통과)
 transfer.js          여행 JSON 내보내기·가져오기 (기기 간 이전 수단)
 share.js             정산 공유 — AES-256-GCM 암호화 → 워커 업로드 → 링크 생성·취소
-countries.js         국가·통화 47개 (COUNTRIES·POPULAR_CODES·searchCountries)
+countries.js         국가·통화 58개 (COUNTRIES·REGIONS·searchCountries). 유로권은 나라별로 따로 있고 code는 모두 EUR
 sampleData.js        개발용 샘플 (__DEV__에서만 Landing에 버튼 노출)
 server/              Cloudflare Worker (공유 서버) + wrangler.toml + README
 docs/                feedback-backlog.md · privacy-policy.html · play-data-safety.md · receipt-import-prompt.md
@@ -87,24 +96,27 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ## 데이터 모델 (여행 1건 = 아래 8개 배열/객체)
 | 키 | 내용 | 주요 필드 |
 |---|---|---|
-| `trip` | 여행 메타 | `id, name, startDate, endDate, country{flag,name,code,sym,r100,exRate}, members[], note` |
+| `trip` | 여행 메타 | `id, name, startDate, endDate, country{flag,name,code,sym,r100,exRate}, countries[], homeCode, members[], note` |
 | `deposits` | 회비 납부 | `mem, cur('KRW'\|'LOCAL'), amt, rate, krwEquiv, date, note` |
-| `charges` | 카드(트래블카드) 충전 | `krw, local, rate, date` |
-| `exchanges` | 현금 환전 | `krw, local, rate, date` |
-| `atms` | ATM 인출(카드→현금) | `local, date, note` |
-| `refunds` | 카드 잔액 이전(카드→계좌) | `local, krw, date` |
-| `expenses` | **외화** 지출 | `name, amt, pay('트래블카드'\|'현금'\|'신용카드'), krwActual?, date, note, participants[], split{mode,values}` |
+| `charges` | 카드(트래블카드) 충전 | `krw, local, rate, cur, date` |
+| `exchanges` | 현금 환전 | `krw, local, rate, cur, date` |
+| `atms` | ATM 인출(카드→현금) | `local, cur, date, note` |
+| `refunds` | 카드 잔액 이전(카드→계좌) | `local, krw, cur, date` |
+| `expenses` | **외화** 지출 | `name, amt, cur, pay('트래블카드'\|'현금'\|'신용카드'), krwActual?, date, note, participants[], split{mode,values}` |
 | `krwExps` | **원화** 지출(계좌 직접 차감) | `name, amt, pay(분류용), date, note, participants[], split{mode,values}` |
 
 - `participants` 없으면 전원, `split` 없으면 균등 — **구버전 데이터 호환 규칙이니 제거 금지.**
+- `cur` 없으면 `homeCode` 통화 — 같은 호환 규칙이다. **다통화로 바꾸면서 저장된 데이터를 한 건도 고치지 않은 이유가 이것.**
+  새 기록은 언제나 `cur`를 적는다(2026-08-30부터). `deposits.cur`만 `'KRW' | 'LOCAL'(구버전=주 통화) | 통화코드` 세 가지다.
 - `split.mode` = `equal` | `ratio`(%) | `fixed`(고정액). `shares`는 엔진만 지원, UI 미노출.
 - id는 `Date.now()`. 저장은 MainScreen의 useEffect가 변경 감지해 자동 수행(수동 저장 버튼 없음).
 
 ## 정산 규칙 (건드릴 때 가장 조심할 부분)
 1. **개인 순액 = 낸 회비 − 참여 지출 부담.** `net > 0` 돌려받음 / `< 0` 더 내기. 구현은 `settle.js`의 `computeSettlement` 하나뿐.
-2. **평균환율 단일 기준**: `avgRate = (charges + exchanges) 각 rate의 단순 평균`. 외화 회비·외화 지출·외화 잔액 전부 이 환율로 원화 환산한다. 저장 시점 환율을 쓰지 않는다(회비 `krwEquiv`는 표시용).
-   - 계산은 **`settle.js`의 `getAvgRate(trip, charges, exchanges)` 하나만** 쓴다. 화면에서 다시 계산하지 말 것(Home·Settle·Deposit 세 탭이 제각각 계산하다 숫자가 어긋난 전례).
-   - 충전·환전이 **0건이면 `country.exRate`(국가 기본환율)로 폴백**한다. 폴백이 없으면 외화 회비가 0원으로 계산돼 순액이 뒤집힌다(회귀 테스트 14번).
+2. **평균환율은 통화마다 따로**: `그 통화의 (charges + exchanges) rate의 단순 평균`. 외화 회비·지출·잔액 전부 이 환율로 원화 환산한다. 저장 시점 환율을 쓰지 않는다(회비 `krwEquiv`는 표시용).
+   - 계산은 **`settle.js`의 `getAvgRates(trip, charges, exchanges)` 하나만** 쓴다. 화면에서 다시 계산하지 말 것(Home·Settle·Deposit 세 탭이 제각각 계산하다 숫자가 어긋난 전례).
+   - 환산은 `makeToKrwMulti(trip, charges, exchanges)` → `(금액, 통화코드)`. 구버전 `makeToKrw(rate, r100)`은 둘째 인자를 무시하므로 **둘을 바꿔 끼워도 화면이 안 깨진다**(그 덕에 탭을 하나씩 옮길 수 있었다).
+   - 충전·환전이 **그 통화에 0건이면 그 통화의 `exRate`(국가 기본환율)로 폴백**한다. 폴백이 없으면 외화 회비가 0원으로 계산돼 순액이 뒤집힌다(회귀 테스트 14번).
 3. **r100 통화**(JPY·VND·IDR·LAK·KHR·MMK·MNT·UZS·ARS·CLP): 환율이 100단위 고시 → 환산 시 `/100`. 신규 국가 추가 시 `r100` 판단을 반드시 확인할 것.
 4. **반올림 잔여는 참여자에게 순환 배정**(`rotation`) → 부담 합계 = 지출액 정확히 일치, 특정인에게 1원이 계속 몰리지 않음. `fixed`는 사용자가 넣은 값 그대로 유지(보정 안 함).
 5. **합계를 맞춰야 저장된다 — 고정액·비율 공통 규칙.** 검증은 `SplitEditor`의 `splitErrorMessage`가 하고, 실제 판정은 `settle.js`의 `checkFixedSplit`(합계 = 지출액) · `checkRatioSplit`(합계 = 100%)이 한다. 저장을 막는 곳은 AddTab 외화·원화 폼, ListTab 수정 모달 **3곳**. 편집기가 접혀 있어도 보이도록 헤드에 부족·초과 배지를 띄운다.
@@ -124,7 +136,10 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
    통화를 원화로 바꿀 때만 반올림해 정수로 정리한다.
 10. **충전·환전·카드잔액이전은 원화·외화·환율 3방향 자동계산.** `ChargeTab`의 `useFxTriple` 하나를 세 폼이 공유한다.
    마지막에 사용자가 건드린 두 칸을 기준으로 나머지 하나만 채운다(직접 친 값은 덮어쓰지 않는다). r100 통화는 ×100·/100이 붙는다.
-11. 정산 로직을 고쳤으면 **`node test-settle.mjs` 통과 필수**(현재 67/67).
+11. **한 여행에 통화가 여러 개일 수 있다** (스위스 CHF + 이탈리아 EUR 같은 경유 여행). `trip.countries`가 거쳐 간 나라 목록이고, 통화가 겹쳐도(이탈리아·프랑스) 그대로 둔다 — 정산이 쓰는 건 코드로 유일화한 `tripCurrencies(trip)`다.
+    - **`trip.homeCode`는 통화가 안 적힌 기록을 읽는 기준일 뿐이다.** 화면에 드러내지 않고 바꿀 수단도 두지 않는다 — 바꾸는 순간 옛 기록의 통화가 통째로 달라져 정산이 조용히 어긋난다. 목록 순서와도 분리돼 있어 나라를 위아래로 옮겨도 흔들리지 않는다.
+    - 폼에서 처음 골라 두는 통화는 `defaultCode(trip)` = **목록 맨 앞**이다. `primaryCode`(=homeCode)와 헷갈리지 말 것.
+12. 정산 로직을 고쳤으면 **`node test-settle.mjs` 통과 필수**(현재 87/87).
 
 ## 공유 구조 (2026-08-05 전면 교체)
 평문을 공개 저장하던 JSONBin 방식을 걷어내고 **암호화 + 서버**로 바꿨다.
@@ -145,10 +160,27 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 ## 설계 결정 (되돌리지 말 것)
 - **결제자(선결제·대납) 필드 없음.** 기능이 아니라 운영으로 처리: 돌려준 돈을 지출 1건으로 기록(이중차감 금지), 공금 부족 시 균등 회비 추가 징수 후 지급. 근거·가이드는 `docs/feedback-backlog.md`.
 - **결제수단 이름은 `constants.js`가 단일 출처**(`PAY_CARD='트래블카드'` · `PAY_CASH` · `PAY_CREDIT`). 2026-08-07에 브랜드명 '트레블월렛'을 걷어냈고, 저장된 옛 데이터는 `migrate.js`가 로드 시 변환한다(`PAY_CARD_LEGACY`). 화면에 결제수단 문자열을 직접 쓰지 말 것.
-- **국가·통화는 여행 생성 후 변경 불가** (정산 기준이 통째로 흔들림). SettingsScreen에서 읽기 전용 표시.
+- **여행 국가는 나중에 더할 수도 뺄 수도 있다**(2026-08-30, 그전에는 생성 후 변경 불가였다). 기록이 있는 통화만 못 뺀다(`currency.currencyHasData`), 마지막 한 나라도 못 뺀다.
+- **정산 기준 통화는 화면에 없다.** 「정산 기준은 EUR」이라고 알리면서 바꿀 수단은 없던 시절이 있었는데, 그 값이 하는 일은 통화가 안 적힌 옛 기록을 읽는 것 하나뿐이라 개념째 걷어냈다. 되살리지 말 것 — 살리려면 바꾸기 전에 `cur` 없는 기록에 현재 기준 통화를 박아 넣는 처리가 반드시 함께 가야 한다.
+- **통화 표기 규칙**: 선택 칩·국가 목록은 `currency.currencyLabel(code, sym)`을 쓴다. 심볼이 코드와 같은 통화(CHF)가 있어 그때는 괄호를 생략한다 — 안 그러면 'CHF (CHF)'가 된다. 잔액처럼 코드를 이미 붙인 자리에는 심볼을 넣지 않는다.
+- **내역 한 줄의 방향은 색이 말한다** — 들어옴 초록 / 나감 빨강 / 여행 안 이동 검정. `+` 부호는 쓰지 않고 `-`도 뺐다. 색만으로 부족한 자리(충전 목록)에는 색을 넣어 맞췄다.
 - **참석자 추가 시 소급 여부를 묻는다**: '이후 지출부터' 선택 시 기존 '전원 균등' 지출을 옛 멤버로 고정(`MainScreen.handleTripSave`).
 - **회비·지출 내역이 있는 참석자는 삭제 불가**(SettingsScreen `memberHasData`).
 - 외화 회비는 **수동 환율 입력 없이** 평균환율 자동 환산. 평균환율이 없으면(충전·환전 0건) 외화 회비 입력을 막는다.
+
+## 네비게이션 함정 (2026-08-30, 실측)
+- **`Stack.Screen`에 `initialParams`를 쓰지 말 것.** 그 화면으로 **갈 때마다 params에 병합**된다.
+  마지막 여행 자동복원 데이터를 Main의 `initialParams`로 심어 뒀더니, 새 여행 시작이 `{ trip }`만
+  넘기는 바람에 나머지 일곱 배열이 **직전 여행 값으로 채워졌고 자동저장이 그걸 새 여행 id로 기록**했다.
+  출시본 v9까지 있던 버그다. 복원 데이터는 `NavigationContainer`의 `initialState`로 넘긴다 —
+  그 라우트 하나에만 붙고 이후 진입에는 안 섞인다.
+- **Main으로 갈 때는 여덟 칸(trip + 일곱 배열)을 전부 명시해 넘긴다.** 빠뜨린 칸은 화면 기본값이
+  아니라 어딘가의 옛 값으로 채워질 수 있다. 호출부는 네 곳(App.js 샘플·가져오기, Setup, History, ImportAI).
+- **드래그 정렬(`ReorderList`)은 PanResponder로 짰다** — gesture-handler·reanimated 없이. 세 가지가 필수다.
+  ① 핸들러를 `useMemo`로 붙잡는다(드래그 중 리렌더로 교체되면 손을 떼도 release가 안 온다).
+  ② `onPanResponderEnd`에서 상태를 되돌리지 말 것 — **End가 Release보다 먼저 불려** 이동칸수가 0이 된다.
+  ③ 웹에서는 목록 전체에 `user-select:none` + `selectstart`/`dragstart` 차단. 안 하면 텍스트 선택이 시작돼
+  「복사 / 모두 선택」 메뉴가 뜨고 제스처가 끊긴다(손잡이에만 걸어서는 옆 텍스트로 번져 부족하다).
 
 ## 키보드 처리 (2026-08-07, 갤럭시 폴드 실측 후 확정)
 **Android 15(targetSdk 35)부터 엣지투엣지가 강제되어 `adjustResize`가 창을 줄이지 않는다.** OS는 키보드
@@ -170,23 +202,32 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
   네이티브 거동으로 판단. `react-native-keyboard-controller` 도입 시 함께 검토.
 
 ## 알려진 부채·주의
-- **잔액 계산이 HomeTab·SettleTab에 아직 중복**(계좌/카드/현금 3종). 한쪽만 고치면 화면 간 숫자가 어긋난다 — 고칠 땐 양쪽 동시에, 여력 되면 avgRate처럼 공용 모듈로 추출.
-  - avgRate와 총 입금·총 지출 환산은 **2026-08-04에 `getAvgRate`로 통일 완료**(그 전까지 두 탭 숫자가 달랐다).
-- 공유 뷰어는 별도 리포 `LeoInKang/travel-expense-app`의 `view.html`(로컬 클론 `~/projects/apps/trippay`). 정산 로직을 `settle.js`에서 그대로 이식해 뒀으니 **엔진을 고치면 뷰어도 같이 고쳐야 한다.**
+- 잔액 계산 중복은 **2026-08-30에 `balances.js`로 통일 완료**(그 전까지 HomeTab·SettleTab이 같은 20여 줄을 각자 들고 있었다). avgRate는 2026-08-04에 `getAvgRate`로 먼저 통일했다.
+- 공유 뷰어는 별도 리포 `LeoInKang/travel-expense-app`의 `view.html`(로컬 클론 `~/projects/apps/trippay`). 정산 로직을 `settle.js`에서 그대로 이식해 뒀으니 **엔진을 고치면 뷰어도 같이 고쳐야 한다.** 다통화 페이로드(`currencies`·`rates`·`balance.byCurrency`)를 읽도록 2026-08-30에 함께 고쳤고, 옛 페이로드(`country`·`avgRate`·`cardBal`)도 계속 읽는다.
 - 워커가 `GET /s/:id`에서 Pages의 `view.html`을 가져와 서빙한다. 즉 **뷰어를 고치면 Pages에 푸시해야 반영**된다(워커 재배포는 불필요).
 - `settle.js` 상단 주석에 "(회비 + 선결제)"가 남아 있으나 선결제는 스코프에서 제거됨(코드는 무관).
-- 루트에 45MB `.aab` 2개가 **untracked이고 .gitignore에도 없다** → `git add .` 하면 그대로 커밋된다.
 - 미디어 라이브러리에 옛 이름 스크린샷(1~5.jpg) 잔존. 스토어에는 새 버전만 적용됨, 정리는 선택.
 - `.bak` 파일이 곳곳에 있으나 `.gitignore` 처리됨. 새로 만들지 말 것(이력은 git).
 
 ## 자주 쓰는 명령
 ```bash
 npx expo start          # 개발 서버. w=웹, 카메라앱으로 QR 스캔=실기기. --tunnel은 ngrok 장애 시 실패 가능
-node test-settle.mjs    # 정산 엔진 단위 테스트 (67개)
+node test-settle.mjs    # 정산 엔진 단위 테스트 (87개)
 cd server && wrangler deploy   # 공유 서버 배포 (Cloudflare 로그인 필요)
-eas build -p android --profile production   # versionCode 자동 증가 → .aab(45MB) 다운로드
+eas build -p android --profile production --non-interactive   # versionCode 자동 증가 → .aab(45MB)
 ```
-빌드 후 Play Console **비공개 테스트 트랙**에 업로드. `eas.json`의 `appVersionSource: "remote"`라 **versionCode는 EAS 서버가 관리** — `app.json`의 `versionCode: 1`은 무시되는 값이니 손대지 말 것. 사용자에게 보이는 버전은 `app.json`의 `version`(현재 1.0.0)과 App.js 랜딩의 "TripPay v1.0" 문자열 두 곳이라, 올릴 땐 같이 올린다.
+빌드 후 Play Console **내부 테스트 트랙**에 올려 본인 기기로 확인하고, 같은 번들을 프로덕션으로 승격한다.
+`eas.json`의 `appVersionSource: "remote"`라 **versionCode는 EAS 서버가 관리** — `app.json`의 `versionCode: 1`은 무시되는 값이니 손대지 말 것.
+사용자에게 보이는 버전은 `app.json`의 `version`과 App.js 랜딩의 "TripPay v1.2.4" 문자열 **두 곳**이라, 올릴 땐 같이 올린다.
+
+**`.aab` 명명 규칙 — 받자마자 `TripPay-v<versionCode>-<version>.aab`로 저장한다.**
+```bash
+curl -sL -o ~/Downloads/TripPay-v10-1.2.4.aab "<EAS 아티팩트 URL>"
+```
+EAS가 주는 URL의 파일명(`b26zlmu-SK2FL7t8...aab`)은 내용 해시라 아무 의미가 없고, 브라우저로 받으면
+`application-<uuid>.aab`로 떨어져 나중에 어느 버전인지 알 수 없다. Play Console은 파일명을 보지 않으므로
+이름은 순전히 사람이 찾기 위한 것이다. 보관 위치는 `~/Downloads/`(v5부터 쭉 거기 있다).
+번들 안 버전 확인: `unzip -p <파일> base/manifest/AndroidManifest.xml | strings | grep '1\.2\.'`
 
 ## 작업 규칙 (Leo 선호 · yakizy와 동일)
 - **한국어 존댓말 · 결론 먼저 · 짧은 줄 · 기호 남발/번역투 금지.**
@@ -194,5 +235,5 @@ eas build -p android --profile production   # versionCode 자동 증가 → .aab
 - **코드 변경은 계획을 먼저 보이고 승인받은 뒤 착수한다.** 설계 전환·기능 추가는 특히. (조회·진단·테스트 실행은 바로)
 - 빌드·배포·커밋도 **무엇을·왜 하는지 알리고 실행**, 되돌리기 어려우면 확인받고 진행.
 - 커밋·푸시는 묻지 말고 직접 실행(상시 승인). 단 브랜치 생성·강제 푸시·reset/revert는 확인받는다.
-- 커밋 메시지는 **영어**, **`git add .` 금지**(변경한 파일만 명시 add — 위 .aab 이슈도 이 때문).
+- 커밋 메시지는 **영어**, **`git add .` 금지**(변경한 파일만 명시 add).
 - 수동 `.bak` 백업 만들지 말 것. 메모리 자동 기록 금지·승인 후만.

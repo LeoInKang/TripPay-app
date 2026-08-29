@@ -247,7 +247,7 @@ export default function ChargeTab({
                     {r.date} · {symOf(r)}{r.local.toLocaleString('ko-KR')} → ₩{(r.krw||0).toLocaleString('ko-KR')}
                   </Text>
                 </View>
-                <Text style={styles.itemAmt}>+₩{(r.krw||0).toLocaleString('ko-KR')}</Text>
+                <Text style={[styles.itemAmt, styles.itemAmtIn]}>₩{(r.krw||0).toLocaleString('ko-KR')}</Text>
                 {renderRowActions('r-' + r.id, () => startEdit('refund', r), () => { setRefunds(refunds.filter(x => x.id !== r.id)); if(editTarget&&editTarget.item.id===r.id) clearEdit(); })}
               </View>
             ))}
@@ -666,6 +666,8 @@ const styles = StyleSheet.create({
   badgeText: { fontSize: 9, fontWeight: '700', color: '#5044a8' },
   itemSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
   itemAmt: { fontSize: 13, fontWeight: '700', color: '#1a1a1a' },
+  // 계좌로 돌아오는 돈만 초록. 충전·환전·ATM은 여행 안에서 옮겨 담는 것이라 검정 그대로 둔다.
+  itemAmtIn: { color: '#1D9E75' },
   actWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 8 },
   editBtn: { paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, backgroundColor: '#eef4fb' },
   editText: { fontSize: 12, color: '#0c447c', fontWeight: '700' },

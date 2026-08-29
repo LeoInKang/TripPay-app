@@ -8,6 +8,7 @@ import KeyboardAvoider from '../components/KeyboardAvoider';
 import FullDateField from '../components/FullDateField';
 import CountryPicker from '../components/CountryPicker';
 import ReorderList from '../components/ReorderList';
+import { currencyLabel } from '../currency';
 
 export default function SetupScreen({ navigation }) {
   const [tripName, setTripName] = useState('');
@@ -125,8 +126,7 @@ export default function SetupScreen({ navigation }) {
               renderRow={(c, i) => (
                 <>
                   <Text style={styles.curName}>{c.flag || '🌏'} {c.name}</Text>
-                  {/* 심볼이 코드와 같은 통화가 있다(CHF). 다를 때만 덧붙인다. */}
-                  <Text style={styles.curCode}>{c.sym && c.sym !== c.code ? `${c.code} ${c.sym}` : c.code}</Text>
+                  <Text style={styles.curCode}>{currencyLabel(c.code, c.sym)}</Text>
                   <TouchableOpacity onPress={() => setCountries(countries.filter((_, j) => j !== i))} hitSlop={10}>
                     <Text style={styles.curDel}>✕</Text>
                   </TouchableOpacity>

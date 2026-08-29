@@ -123,9 +123,14 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
                   <View style={styles.rowInfo}>
                     <View style={styles.rowNameLine}>
                       <Text style={styles.rowName}>{_itemName(item)}</Text>
-                      {_isFxDeposit(item, trip) && (
+                      {/* 내역·회비 탭과 같은 자리에 통화를 적는다. 원화는 파랑, 외화는 보라. */}
+                      {_codeOf(item, trip) === 'KRW' ? (
+                        <View style={[styles.badge, styles.badgeKrw]}>
+                          <Text style={[styles.badgeText, styles.badgeKrwText]}>KRW</Text>
+                        </View>
+                      ) : (
                         <View style={styles.badge}>
-                          <Text style={styles.badgeText}>{codeOfDeposit(item, trip)}</Text>
+                          <Text style={styles.badgeText}>{_codeOf(item, trip)}</Text>
                         </View>
                       )}
                     </View>
@@ -169,6 +174,12 @@ function _symOf(item, trip) {
   if (code === 'KRW') return '₩';
   const cur = currencyOf(trip, code);
   return (cur && cur.sym) || '';
+}
+// 내역 한 줄의 통화 코드. 원화 지출은 언제나 KRW다.
+function _codeOf(item, trip) {
+  if (item.type === 'deposit') return codeOfDeposit(item, trip);
+  if (item.type === 'krwexp') return 'KRW';
+  return codeOfRecord(item, trip);
 }
 function _isFxDeposit(item, trip) {
   return item.type === 'deposit' && codeOfDeposit(item, trip) !== 'KRW';
@@ -226,6 +237,8 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
   badge: { backgroundColor: '#e8e6ff', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
   badgeText: { fontSize: 9, fontWeight: '700', color: '#5044a8' },
+  badgeKrw: { backgroundColor: '#e6f1fb' },
+  badgeKrwText: { color: '#0c447c' },
   rowAmtBox: { alignItems: 'flex-end' },
   rowAmt: { fontSize: 13, fontWeight: '700' },
   rowAmtKrw: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },

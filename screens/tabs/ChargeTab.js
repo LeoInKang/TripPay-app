@@ -185,7 +185,12 @@ export default function ChargeTab({
               <View key={'c-' + c.id} style={[styles.itemRow, editTarget && editTarget.type==='charge' && editTarget.item.id===c.id && styles.itemRowEditing]}>
                 <Text style={styles.itemIcon}>💳</Text>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>카드 충전</Text>
+                  <View style={styles.itemNameLine}>
+                    <Text style={styles.itemName}>카드 충전</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{codeOfRecord(c, trip)}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.itemSub}>
                     {c.date} · ₩{c.krw.toLocaleString('ko-KR')} → {symOf(c)}{c.local.toLocaleString('ko-KR')} · 환율 {r100Of(c) ? '100' : '1'}{symOf(c)}={c.rate}원
                   </Text>
@@ -198,7 +203,12 @@ export default function ChargeTab({
               <View key={'e-' + e.id} style={[styles.itemRow, editTarget && editTarget.type==='exchange' && editTarget.item.id===e.id && styles.itemRowEditing]}>
                 <Text style={styles.itemIcon}>🔄</Text>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>현금 환전</Text>
+                  <View style={styles.itemNameLine}>
+                    <Text style={styles.itemName}>현금 환전</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{codeOfRecord(e, trip)}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.itemSub}>
                     {e.date} · ₩{e.krw.toLocaleString('ko-KR')} → {symOf(e)}{e.local.toLocaleString('ko-KR')} · 환율 {r100Of(e) ? '100' : '1'}{symOf(e)}={e.rate}원
                   </Text>
@@ -211,7 +221,12 @@ export default function ChargeTab({
               <View key={'a-' + a.id} style={[styles.itemRow, editTarget && editTarget.type==='atm' && editTarget.item.id===a.id && styles.itemRowEditing]}>
                 <Text style={styles.itemIcon}>🏧</Text>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>ATM 인출</Text>
+                  <View style={styles.itemNameLine}>
+                    <Text style={styles.itemName}>ATM 인출</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{codeOfRecord(a, trip)}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.itemSub}>{a.date}{a.note ? ' · ' + a.note : ''}</Text>
                 </View>
                 <Text style={styles.itemAmt}>{symOf(a)}{a.local.toLocaleString('ko-KR')}</Text>
@@ -222,7 +237,12 @@ export default function ChargeTab({
               <View key={'r-' + r.id} style={[styles.itemRow, editTarget && editTarget.type==='refund' && editTarget.item.id===r.id && styles.itemRowEditing]}>
                 <Text style={styles.itemIcon}>↩</Text>
                 <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>카드 잔액 이전</Text>
+                  <View style={styles.itemNameLine}>
+                    <Text style={styles.itemName}>카드 잔액 이전</Text>
+                    <View style={styles.badge}>
+                      <Text style={styles.badgeText}>{codeOfRecord(r, trip)}</Text>
+                    </View>
+                  </View>
                   <Text style={styles.itemSub}>
                     {r.date} · {symOf(r)}{r.local.toLocaleString('ko-KR')} → ₩{(r.krw||0).toLocaleString('ko-KR')}
                   </Text>
@@ -640,6 +660,10 @@ const styles = StyleSheet.create({
   itemIcon: { fontSize: 18, marginRight: 10 },
   itemInfo: { flex: 1 },
   itemName: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
+  // 통화 뱃지는 다른 탭과 같은 모양으로 이름 옆에 붙인다
+  itemNameLine: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  badge: { backgroundColor: '#e8e6ff', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeText: { fontSize: 9, fontWeight: '700', color: '#5044a8' },
   itemSub: { fontSize: 11, color: '#9b9b9b', marginTop: 1 },
   itemAmt: { fontSize: 13, fontWeight: '700', color: '#1a1a1a' },
   actWrap: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 8 },

@@ -170,12 +170,12 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>총 입금 (원화환산)</Text>
-            <Text style={styles.subValueLg}>₩{totalDeposit.toLocaleString('ko-KR')}</Text>
+            <Text style={styles.subValueLg}>{totalDeposit.toLocaleString('ko-KR')}원</Text>
           </View>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>총 지출 (원화환산)</Text>
             <Text style={[styles.subValueLg, { color: '#E24B4A' }]}>
-              ₩{totalExpKrw.toLocaleString('ko-KR')}
+              {totalExpKrw.toLocaleString('ko-KR')}원
             </Text>
           </View>
         </View>
@@ -223,7 +223,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
               <View style={styles.memberInfo}>
                 <Text style={styles.memberName}>{pm.name}</Text>
                 <Text style={styles.memberSub}>
-                  낸 돈 ₩{pm.paidIn.toLocaleString('ko-KR')} · 부담 ₩{pm.owed.toLocaleString('ko-KR')}
+                  낸 돈 {pm.paidIn.toLocaleString('ko-KR')}원 · 부담 {pm.owed.toLocaleString('ko-KR')}원
                 </Text>
               </View>
               <View style={[styles.refundBadge, owe && styles.oweBadge, zero && styles.zeroBadge]}>
@@ -242,7 +242,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
         {/* 하단 요약 */}
         <View style={styles.bottomSummary}>
           <Text style={styles.bottomSummaryText}>
-            총 입금 ₩{totalDeposit.toLocaleString('ko-KR')} · 총 지출 ₩{totalExpKrw.toLocaleString('ko-KR')} · 낸 돈−부담 기준 개인별 정산
+            총 입금 {totalDeposit.toLocaleString('ko-KR')}원 · 총 지출 {totalExpKrw.toLocaleString('ko-KR')}원 · 낸 돈−부담 기준 개인별 정산
           </Text>
         </View>
       </View>

@@ -23,7 +23,7 @@ function BalLine({ c, value, n, multi }) {
         {multi && <Text style={styles.balCode}>{c.code}</Text>}
         <Text style={[styles.subValue, { color }]}>{sym}{value.toLocaleString('ko-KR')}</Text>
       </View>
-      <Text style={styles.subPer}>인당 {sym}{Math.round(value / n).toLocaleString('ko-KR')}</Text>
+      <Text style={[styles.subPer, multi && styles.subPerRight]}>인당 {sym}{Math.round(value / n).toLocaleString('ko-KR')}</Text>
     </View>
   );
 }
@@ -263,7 +263,8 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
 
 const styles = StyleSheet.create({
   balLineMulti: { marginTop: 4 },
-  balLineTop: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
+  // 코드는 왼쪽, 금액은 오른쪽 (현황 탭의 잔액 줄과 같은 정렬)
+  balLineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 },
   balCode: { fontSize: 11, color: '#6b6b6b' },
   container: { flex: 1, backgroundColor: '#f0eee8' },
   content: { padding: 12, paddingBottom: 32 },
@@ -318,6 +319,7 @@ const styles = StyleSheet.create({
   subValue: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   subValueLg: { fontSize: 20, fontWeight: '800', color: '#1a1a1a' },
   subPer: { fontSize: 10, color: '#9b9b9b', marginTop: 2 },
+  subPerRight: { textAlign: 'right' },   // 금액을 오른쪽에 붙였으니 인당 값도 그 아래로 맞춘다
 
   // 참석자별 정산
   memberRow: {

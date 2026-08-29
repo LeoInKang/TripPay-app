@@ -92,7 +92,7 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
           <Text style={styles.balSub}>충전가능</Text>
         </View>
         <View style={styles.balCard}>
-          <Text style={styles.balLabel}>카드 잔액</Text>
+          <Text style={styles.balLabel}>트래블카드 잔액</Text>
           {byCurrency.map(c => (
             <CurLine key={'card-' + c.code} c={c} value={c.cardBal} multi={multi} />
           ))}

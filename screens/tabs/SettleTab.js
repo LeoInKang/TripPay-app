@@ -173,7 +173,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
           </View>
         </View>
 
-        {/* 2줄: 계좌 잔액 / 트래블카드 잔액 */}
+        {/* 2줄: 계좌 · 트래블카드 · 현금 (현황 탭과 같은 배치) */}
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>계좌 잔액</Text>
@@ -188,17 +188,12 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
               <BalLine key={'card-' + c.code} c={c} value={c.cardBal} n={N} multi={multi} />
             ))}
           </View>
-        </View>
-
-        {/* 3줄: 현금 잔액 (단독) */}
-        <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>현금 잔액</Text>
             {byCurrency.map(c => (
               <BalLine key={'cash-' + c.code} c={c} value={c.cashBal} n={N} multi={multi} />
             ))}
           </View>
-          <View style={[styles.subCard, { backgroundColor: 'transparent' }]} />
         </View>
       </View>
 
@@ -308,10 +303,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f7f3',
     borderRadius: 10,
-    padding: 12,
+    padding: 10,
   },
   subLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },
-  subValue: { fontSize: 18, fontWeight: '700', color: '#1a1a1a' },
+  subValue: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },
   subValueLg: { fontSize: 20, fontWeight: '800', color: '#1a1a1a' },
   subPer: { fontSize: 10, color: '#9b9b9b', marginTop: 2 },
 

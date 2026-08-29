@@ -66,20 +66,19 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
       {/* 총 입금/지출 */}
       <View style={styles.sumRow}>
         <View style={[styles.sumCard, { flex: 1 }]}>
-          <Text style={styles.balLabel}>총 입금</Text>
+          <Text style={styles.balLabel}>총 입금 (원화환산)</Text>
           <Text style={styles.sumValue}>₩{totalDepKrw.toLocaleString('ko-KR')}</Text>
           <Text style={styles.balSub}>{deposits.length}건</Text>
         </View>
         <View style={[styles.sumCard, { flex: 1 }]}>
-          <Text style={styles.balLabel}>총 지출</Text>
-          {/* 통화가 여럿이면 외화 금액을 더할 수 없으므로 원화 환산액만 보여준다 */}
-          <Text style={styles.sumValue}>
-            {multi
-              ? `₩${totalExpKrw.toLocaleString('ko-KR')}`
-              : `${primary.sym}${primary.fxAmt.toLocaleString('ko-KR')}${totalKrwExp > 0 ? ` +₩${totalKrwExp.toLocaleString('ko-KR')}` : ''}`}
-          </Text>
+          <Text style={styles.balLabel}>총 지출 (원화환산)</Text>
+          {/* 원화를 주 숫자로 두고 외화 합계는 부제로 내린다 (정산 탭과 같은 기준).
+              통화가 여럿이면 외화끼리 더할 수 없으므로 부제를 생략한다. */}
+          <Text style={styles.sumValue}>₩{totalExpKrw.toLocaleString('ko-KR')}</Text>
           <Text style={styles.balSub}>
-            {multi ? '원화 환산' : `₩${totalExpKrw.toLocaleString('ko-KR')} 상당`}
+            {multi
+              ? `통화 ${byCurrency.length}종`
+              : `${primary.sym}${primary.fxAmt.toLocaleString('ko-KR')}${totalKrwExp > 0 ? ` +₩${totalKrwExp.toLocaleString('ko-KR')}` : ''}`}
           </Text>
         </View>
       </View>

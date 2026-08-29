@@ -13,15 +13,17 @@ function notify(msg) {
 }
 
 // 잔액 한 줄 + 인당 값. 통화가 하나면 종전 모양 그대로, 여럿이면 통화 코드를 앞에 붙인다.
+// 코드를 붙일 때는 심볼을 빼서 'CHF CHF0'처럼 겹치지 않게 한다 (현황 탭과 같은 모양).
 function BalLine({ c, value, n, multi }) {
   const color = value < 0 ? '#E24B4A' : '#1D9E75';
+  const sym = multi ? '' : c.sym;
   return (
     <View style={multi ? styles.balLineMulti : null}>
       <View style={styles.balLineTop}>
         {multi && <Text style={styles.balCode}>{c.code}</Text>}
-        <Text style={[styles.subValue, { color }]}>{c.sym}{value.toLocaleString('ko-KR')}</Text>
+        <Text style={[styles.subValue, { color }]}>{sym}{value.toLocaleString('ko-KR')}</Text>
       </View>
-      <Text style={styles.subPer}>인당 {c.sym}{Math.round(value / n).toLocaleString('ko-KR')}</Text>
+      <Text style={styles.subPer}>인당 {sym}{Math.round(value / n).toLocaleString('ko-KR')}</Text>
     </View>
   );
 }

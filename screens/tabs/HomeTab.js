@@ -194,7 +194,8 @@ function _itemSub(item, sym) {
 function _itemAmt(item, sym, trip) {
   if(item.type==='deposit') {
     if(_isFxDeposit(item, trip)) return `${sym}${(item.amt||0).toLocaleString('ko-KR')}`;
-    return `+₩${(item.krwEquiv||item.amt||0).toLocaleString('ko-KR')}`;
+    // 부호는 돈이 나가는 줄에만 붙인다 (+는 초록색과 같은 말을 두 번 하는 셈이다)
+    return `₩${(item.krwEquiv||item.amt||0).toLocaleString('ko-KR')}`;
   }
   if(item.type==='charge')   return `${sym}${item.local?.toLocaleString('ko-KR')}`;
   if(item.type==='exchange') return `${sym}${item.local?.toLocaleString('ko-KR')}`;

@@ -6,6 +6,7 @@ import {
 import KeyboardAvoider from '../components/KeyboardAvoider';
 import DateField from '../components/FullDateField';
 import CountryPicker from '../components/CountryPicker';
+import ReorderList from '../components/ReorderList';
 import { tripCountries, currencyHasData, primaryCode } from '../currency';
 
 function notify(msg) {
@@ -34,6 +35,8 @@ export default function SettingsScreen({ route, navigation }) {
   // 순서는 표시용이라 자유롭게 옮길 수 있다 — 정산 기준은 homeCode가 따로 들고 있다.
   const [countries, setCountries] = useState(() => tripCountries(trip));
   const [picking, setPicking] = useState(false);
+  // 순서를 끄는 동안에는 화면 스크롤을 잠근다 (안 그러면 ScrollView가 터치를 가로챈다)
+  const [dragging, setDragging] = useState(false);
   const homeCode = primaryCode(trip);
   const [editIdx,   setEditIdx]   = useState(null);
   const [editName,  setEditName]  = useState('');
@@ -58,14 +61,6 @@ export default function SettingsScreen({ route, navigation }) {
       return;
     }
     setCountries(countries.filter((_, j) => j !== i));
-  };
-
-  const moveCountry = (i, dir) => {
-    const j = i + dir;
-    if (j < 0 || j >= countries.length) return;
-    const next = [...countries];
-    [next[i], next[j]] = [next[j], next[i]];
-    setCountries(next);
   };
 
   const addMember = () => {
@@ -174,7 +169,7 @@ export default function SettingsScreen({ route, navigation }) {
       </View>
 
       <KeyboardAvoider style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" scrollEnabled={!dragging}>
         <View style={styles.field}>
           <Text style={styles.label}>여행명</Text>
           <TextInput
@@ -267,33 +262,21 @@ export default function SettingsScreen({ route, navigation }) {
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>여행 국가</Text>
 
-          {countries.map((c, i) => (
-            <View key={(c.code || '') + c.name + i} style={styles.curRow}>
-              <View style={styles.curMove}>
-                <TouchableOpacity
-                  style={styles.curArrowBtn}
-                  onPress={() => moveCountry(i, -1)}
-                  disabled={i === 0}
-                  hitSlop={{ top: 6, bottom: 2, left: 10, right: 10 }}
-                >
-                  <Text style={[styles.curArrow, i === 0 && styles.curArrowOff]}>▲</Text>
+          <ReorderList
+            data={countries}
+            onChange={setCountries}
+            onDragging={setDragging}
+            rowHeight={46}
+            renderRow={(c, i) => (
+              <>
+                <Text style={styles.curName}>{c.flag || '🌏'} {c.name || ''}</Text>
+                <Text style={styles.curCode}>{c.code} {c.sym}</Text>
+                <TouchableOpacity onPress={() => removeCountry(i)} hitSlop={10}>
+                  <Text style={styles.curDel}>✕</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.curArrowBtn}
-                  onPress={() => moveCountry(i, 1)}
-                  disabled={i === countries.length - 1}
-                  hitSlop={{ top: 2, bottom: 6, left: 10, right: 10 }}
-                >
-                  <Text style={[styles.curArrow, i === countries.length - 1 && styles.curArrowOff]}>▼</Text>
-                </TouchableOpacity>
-              </View>
-              <Text style={styles.curName}>{c.flag || '🌏'} {c.name || ''}</Text>
-              <Text style={styles.curCode}>{c.code} {c.sym}</Text>
-              <TouchableOpacity onPress={() => removeCountry(i)} hitSlop={8}>
-                <Text style={styles.curDel}>✕</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+              </>
+            )}
+          />
 
           <TouchableOpacity style={styles.btnAddCur} onPress={() => setPicking(true)} activeOpacity={0.8}>
             <Text style={styles.btnAddCurText}>+ 국가 추가</Text>
@@ -311,7 +294,7 @@ export default function SettingsScreen({ route, navigation }) {
           )}
 
           <Text style={styles.infoHint}>
-            거쳐 간 나라를 다 넣으세요. 통화가 같은 나라는 지출 입력에서 하나로 묶입니다.{'\n'}
+            왼쪽 손잡이를 끌어 순서를 바꿀 수 있어요. 통화가 같은 나라는 지출 입력에서 하나로 묶입니다.{'\n'}
             정산 기준은 {homeCode}이고 순서를 바꿔도 달라지지 않아요. 기록이 있는 통화는 뺄 수 없습니다.
           </Text>
         </View>
@@ -372,16 +355,8 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 14, color: '#1a1a1a', fontWeight: '600' },
   infoHint: { fontSize: 11, color: '#9b9b9b', marginTop: 6, lineHeight: 16 },
 
-  curRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 8, borderBottomWidth: 0.5, borderBottomColor: 'rgba(0,0,0,0.06)',
-  },
   curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
   curCode: { fontSize: 12, color: '#9b9b9b', marginRight: 10 },
-  curMove: { marginRight: 10 },
-  curArrowBtn: { width: 30, height: 22, alignItems: 'center', justifyContent: 'center' },
-  curArrow: { fontSize: 15, color: '#1a3a5c', lineHeight: 17 },
-  curArrowOff: { color: '#d0d0d0' },
   curBadge: { fontSize: 11, color: '#1a3a5c', backgroundColor: '#e6eefa', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
   curDel: { fontSize: 14, color: '#E24B4A', paddingHorizontal: 6 },
   btnAddCur: {

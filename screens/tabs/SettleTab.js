@@ -49,8 +49,9 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   const rates = getAvgRates(trip, charges, exchanges);
   const rateLines = byCurrency
     .filter(c => (rates[c.code] || 0) > 0)
-    // 심볼이 아니라 통화 코드로 적는다 — Kč·zł·Ft 는 한눈에 어느 나라 돈인지 알기 어렵다
-    .map(c => `평균 환율: ${c.cur && c.cur.r100 ? '100' : '1'}${c.code} = ${rates[c.code].toFixed(2)}원`);
+    // 심볼이 아니라 통화 코드로 적는다 — Kč·zł·Ft 는 한눈에 어느 나라 돈인지 알기 어렵다.
+    // '평균 환율'은 카드 제목이 말해 주므로 줄마다 되풀이하지 않는다.
+    .map(c => `${c.cur && c.cur.r100 ? '100' : '1'}${c.code} = ${rates[c.code].toFixed(2)}원`);
 
   // 개인별 정산 (선결제·참여자·분담방식 반영)
   const { perMember } = computeSettlement({ members, deposits, expenses, krwExps, trip, toKrw });
@@ -246,6 +247,7 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
       {/* 평균 환율 — 통화별로 한 줄씩 */}
       {rateLines.length > 0 && (
         <View style={styles.rateCard}>
+          <Text style={styles.rateTitle}>평균 환율</Text>
           {rateLines.map(line => (
             <Text key={line} style={styles.rateText}>{line}</Text>
           ))}
@@ -353,5 +355,6 @@ const styles = StyleSheet.create({
   },
 
   rateCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, alignItems: 'center' },
+  rateTitle: { fontSize: 12, color: '#6b6b6b', fontWeight: '700', marginBottom: 3 },
   rateText: { fontSize: 12, color: '#6b6b6b' },
 });

@@ -148,8 +148,8 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
       {hasNegative && (
         <View style={styles.warnBanner}>
           <Text style={styles.warnText}>
-            잔액이 마이너스입니다. 지출이 입금·충전보다 많아요.{'\n'}
-            자동충전 내역이 빠지지 않았는지 확인해 보세요.
+            잔액이 마이너스입니다. 지출·충전이 입금보다 많아요.{'\n'}
+            회비 납부를 먼저 넣었는지, 자동충전 내역이 빠지지 않았는지 확인해 보세요.
           </Text>
         </View>
       )}

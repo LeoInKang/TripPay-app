@@ -69,7 +69,10 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
     try {
       const { url, method, id, token, expiresAt } = await shareTrip({
         trip, deposits, expenses, krwExps,
-        balance: { acctBal, byCurrency: byCurrency.map(c => ({ code: c.code, sym: c.sym, cardBal: c.cardBal, cashBal: c.cashBal })) },
+        balance: {
+          acctBal, rates,
+          byCurrency: byCurrency.map(c => ({ code: c.code, sym: c.sym, cardBal: c.cardBal, cashBal: c.cashBal })),
+        },
       });
       // 만료 정리·공유 취소에 쓰려면 링크를 어디에 만들었는지 남겨야 한다
       if (setTrip) setTrip({ ...trip, share: { id, token, expiresAt } });

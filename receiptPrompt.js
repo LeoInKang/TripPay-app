@@ -36,6 +36,8 @@ export const RECEIPT_PROMPT = `첨부한 영수증 사진들을 읽어 아래 �
    신용카드로 낸 건은 내가 앱에서 직접 바꾼다. 카드 끝 4자리가 보이면 note에 남겨 줘.
 4. name은 한국어로 짧게(가게명 또는 용도). 상세(지점·인원·구성)는 note에.
 5. 원화(KRW) 지출은 expenses가 아니라 krwExps에 넣는다(pay 필드 없음). 통화를 섞지 마.
+   영수증이 여러 나라 것이면 통화별로 JSON을 따로 만들어 줘. 한 JSON에는 한 외화만 담긴다.
+   (예: 스위스+이탈리아 여행이면 CHF용 JSON 하나, EUR용 JSON 하나. 앱에서 같은 여행에 차례로 넣는다.)
 6. country는 여행 국가에 맞게. 자주 쓰는 값:
    일본 JPY ¥ r100=true exRate=930 / 캐나다 CAD C$ r100=false 980 / 베트남 VND ₫ r100=true 5.5 /
    태국 THB ฿ r100=false 40 / 미국 USD $ r100=false 1350 / 유럽 EUR € r100=false 1500

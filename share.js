@@ -28,24 +28,42 @@ function toB64url(bytes) {
 }
 
 // 여행 데이터 -> 공유 페이로드 (뷰어가 그대로 렌더링한다)
+//
+// 다통화 여행을 담으려고 currencies·rates·balance.byCurrency 를 추가했다.
+// country 와 balance 의 avgRate·cardBal·cashBal 은 주 통화 기준으로 계속 채운다 —
+// 뷰어가 아직 옛 버전일 때도 단일 통화 여행은 그대로 보이게 하기 위해서다.
 export function buildSharePayload({ trip, deposits, expenses, krwExps, balance }) {
+  const list = (trip?.currencies && trip.currencies.length ? trip.currencies : [trip?.country]).filter(Boolean);
+  const primary = list[0] || {};
+  const byCur = balance?.byCurrency || [];
+  const first = byCur[0] || {};
+  const rates = balance?.rates || {};
+
   return {
     tripName: trip?.name || '',
     country: {
-      sym:  trip?.country?.sym  || '',
-      flag: trip?.country?.flag || '🌏',
-      r100: trip?.country?.r100 || false,
-      code: trip?.country?.code || '',
+      sym:  primary.sym  || '',
+      flag: primary.flag || '🌏',
+      r100: primary.r100 || false,
+      code: primary.code || '',
     },
+    currencies: list.map(c => ({
+      code: c.code || '', sym: c.sym || '', flag: c.flag || '🌏', r100: !!c.r100, name: c.name || '',
+    })),
+    rates,
     startDate: trip?.startDate || '',
     endDate:   trip?.endDate   || '',
     members:   trip?.members   || [],
     note:      trip?.note      || '',
     balance: {
-      avgRate: balance?.avgRate || 0,
       acctBal: balance?.acctBal || 0,
-      cardBal: balance?.cardBal || 0,
-      cashBal: balance?.cashBal || 0,
+      byCurrency: byCur.map(c => ({
+        code: c.code || '', sym: c.sym || '', cardBal: c.cardBal || 0, cashBal: c.cashBal || 0,
+      })),
+      // 옛 뷰어 호환 (주 통화 기준)
+      avgRate: rates[primary.code || ''] || 0,
+      cardBal: first.cardBal || 0,
+      cashBal: first.cashBal || 0,
     },
     deposits: deposits || [],
     expenses: expenses || [],

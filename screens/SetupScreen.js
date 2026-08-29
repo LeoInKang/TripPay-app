@@ -7,6 +7,7 @@ import {
 import KeyboardAvoider from '../components/KeyboardAvoider';
 import FullDateField from '../components/FullDateField';
 import CountryPicker from '../components/CountryPicker';
+import ReorderList from '../components/ReorderList';
 
 export default function SetupScreen({ navigation }) {
   const [tripName, setTripName] = useState('');
@@ -16,6 +17,8 @@ export default function SetupScreen({ navigation }) {
   // 거쳐 가는 나라를 한 번에 고른다. 첫 번째가 정산 기준 통화가 된다.
   const [countries, setCountries] = useState([]);
   const [picking, setPicking] = useState(false);
+  // 순서를 끄는 동안에는 화면 스크롤을 잠근다 (설정 화면과 같은 이유)
+  const [dragging, setDragging] = useState(false);
   const [note, setNote] = useState('');
 
   // 시작일 선택 시 종료일이 비어 있으면 다음날로 자동 설정
@@ -71,6 +74,7 @@ export default function SetupScreen({ navigation }) {
         <ScrollView
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={!dragging}
           showsVerticalScrollIndicator={true}
         >
 
@@ -100,15 +104,25 @@ export default function SetupScreen({ navigation }) {
           <View style={styles.field}>
             <Text style={styles.label}>여행 국가 (여러 곳이면 다 고르세요)</Text>
 
-            {countries.map((c, i) => (
-              <View key={(c.code || '') + c.name + i} style={styles.curRow}>
-                <Text style={styles.curName}>{c.flag || '🌏'} {c.name}</Text>
-                <Text style={styles.curCode}>{c.code} {c.sym}</Text>
-                <TouchableOpacity onPress={() => setCountries(countries.filter((_, j) => j !== i))} hitSlop={8}>
-                  <Text style={styles.curDel}>✕</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
+            {countries.length > 0 && (
+            <View style={styles.curBox}>
+            <ReorderList
+              data={countries}
+              onChange={setCountries}
+              onDragging={setDragging}
+              rowHeight={46}
+              renderRow={(c, i) => (
+                <>
+                  <Text style={styles.curName}>{c.flag || '🌏'} {c.name}</Text>
+                  <Text style={styles.curCode}>{c.code} {c.sym}</Text>
+                  <TouchableOpacity onPress={() => setCountries(countries.filter((_, j) => j !== i))} hitSlop={10}>
+                    <Text style={styles.curDel}>✕</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            />
+            </View>
+            )}
 
             <TouchableOpacity style={styles.btnAddCur} onPress={() => setPicking(true)} activeOpacity={0.8}>
               <Text style={styles.btnAddCurText}>
@@ -129,7 +143,7 @@ export default function SetupScreen({ navigation }) {
 
             {countries.length > 1 && (
               <Text style={styles.hint}>
-                지출·충전을 통화별로 기록합니다. 통화가 같은 나라는 하나로 묶여요.{'\n'}
+                왼쪽 손잡이를 끌어 순서를 바꿀 수 있어요. 통화가 같은 나라는 하나로 묶여요.{'\n'}
                 {countries[0].code}가 정산 기준입니다.
               </Text>
             )}
@@ -185,11 +199,10 @@ const styles = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '600', color: '#6b6b6b', marginBottom: 6 },
   hint: { fontSize: 11, color: '#9b9b9b', marginTop: 8, lineHeight: 16 },
 
-  curRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 8, paddingHorizontal: 12,
+  // overflow:hidden 을 주면 끌어올린 행이 상자 밖에서 잘린다
+  curBox: {
     backgroundColor: '#fff', borderRadius: 10,
-    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', marginBottom: 6,
+    borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', marginBottom: 8,
   },
   curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
   curCode: { fontSize: 12, color: '#9b9b9b', marginRight: 10 },

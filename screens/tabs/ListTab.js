@@ -203,9 +203,15 @@ export default function ListTab({ trip, charges = [], exchanges = [], expenses, 
                       <Text style={styles.badgeNewText}>새로 추가</Text>
                     </View>
                   )}
-                  {item.type === 'krw' && (
+                  {/* 회비 내역과 같은 자리·같은 모양으로 통화를 적는다.
+                      원화는 파랑, 외화는 보라 — 색만 봐도 어느 쪽인지 갈린다. */}
+                  {item.type === 'krw' ? (
                     <View style={styles.badgeKrw}>
-                      <Text style={styles.badgeKrwText}>원화</Text>
+                      <Text style={styles.badgeKrwText}>KRW</Text>
+                    </View>
+                  ) : (
+                    <View style={[styles.badgeKrw, styles.badgeFx]}>
+                      <Text style={[styles.badgeKrwText, styles.badgeFxText]}>{codeOfRecord(item, trip)}</Text>
                     </View>
                   )}
                   {item.type === 'fx' && item.pay === PAY_CREDIT && !(item.krwActual > 0) && (
@@ -495,6 +501,8 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
   },
   badgeKrwText: { fontSize: 9, color: '#0c447c', fontWeight: '600' },
+  badgeFx: { backgroundColor: '#e8e6ff' },
+  badgeFxText: { color: '#5044a8' },
   badgeWait: {
     backgroundColor: '#FAEEDA',
     borderRadius: 4,

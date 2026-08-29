@@ -62,6 +62,11 @@ export function currencyOf(trip, code) {
   return (home && list.find(c => c && c.code === home)) || list[0] || null;
 }
 
+// 통화 선택 칩에 쓰는 이름. 심볼이 코드와 같은 통화가 있어(CHF) 그때는 괄호를 달지 않는다.
+export function currencyLabel(code, sym) {
+  return sym && sym !== code ? `${code} (${sym})` : code;
+}
+
 // 화면에서 처음 골라 둘 통화. 목록 맨 앞이다.
 // 정산 기준(primaryCode)과는 다르다 — 그쪽은 통화가 안 적힌 옛 기록을 읽을 때만 쓴다.
 export function defaultCode(trip) {

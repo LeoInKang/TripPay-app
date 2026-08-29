@@ -13,7 +13,7 @@ import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, defaultCode, codeOfRecord } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfRecord, currencyLabel } from '../../currency';
 
 export default function ListTab({ trip, charges = [], exchanges = [], expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
@@ -355,8 +355,8 @@ function EditExpenseModal({ item, trip, sym, payMethods, members, onClose, onSav
                   label="통화"
                   value={cur}
                   options={[
-                    ...curList.map(c => ({ value: c.code, label: multi ? c.code : `외화 ${c.sym}` })),
-                    { value: 'KRW', label: multi ? 'KRW' : '원화 ₩' },
+                    ...curList.map(c => ({ value: c.code, label: multi ? currencyLabel(c.code, c.sym) : `외화 ${c.sym}` })),
+                    { value: 'KRW', label: multi ? currencyLabel('KRW', '₩') : '원화 ₩' },
                   ]}
                   onChange={(v) => {
                     if (v === cur) return;

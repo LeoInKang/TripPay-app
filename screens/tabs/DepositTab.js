@@ -7,7 +7,7 @@ import BottomSheet from '../../components/BottomSheet';
 import CurrencyPicker from '../../components/CurrencyPicker';
 import DateField   from '../../components/DateField';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, defaultCode, codeOfDeposit } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfDeposit, currencyLabel } from '../../currency';
 import { getAvgRates } from '../../settle';
 
 function notify(msg) {
@@ -44,11 +44,9 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   const toKrwLocal = (v) => (avgRate > 0 ? Math.round((v * avgRate) / (curObj.r100 ? 100 : 1)) : 0);
 
   const memberOptions = trip.members.map(m => ({ value: m, label: m }));
-  // 코드에 심볼을 덧붙이면 CHF처럼 둘이 같은 통화가 'CHF CHF'로 겹친다.
-  // 심볼은 옆 금액 칸 라벨에 이미 있다.
   const currencyOptions = [
-    { value: 'KRW', label: multiCur ? 'KRW' : '원화 ₩' },
-    ...curList.map(c => ({ value: c.code, label: multiCur ? c.code : `외화 ${c.sym}` })),
+    { value: 'KRW', label: multiCur ? currencyLabel('KRW', '₩') : '원화 ₩' },
+    ...curList.map(c => ({ value: c.code, label: multiCur ? currencyLabel(c.code, c.sym) : `외화 ${c.sym}` })),
   ];
 
   const handleAmtChange = (v) => {

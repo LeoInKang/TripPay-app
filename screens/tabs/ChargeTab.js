@@ -6,7 +6,7 @@ import {
 import DateField from '../../components/DateField';
 import CurrencyPicker from '../../components/CurrencyPicker';
 import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
-import { tripCurrencies, defaultCode, codeOfRecord } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfRecord, currencyLabel } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -38,7 +38,7 @@ function useFormCurrency(trip, lastCur, setLastCur) {
 
 function CurrencyPick({ c }) {
   if (!c.multi) return null;
-  const options = c.list.map(x => ({ value: x.code, label: x.code }));
+  const options = c.list.map(x => ({ value: x.code, label: currencyLabel(x.code, x.sym) }));
   return (
     <View style={styles.formRow}>
       <View style={styles.col}>

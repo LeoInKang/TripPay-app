@@ -9,7 +9,7 @@ import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, defaultCode } from '../../currency';
+import { tripCurrencies, defaultCode, currencyLabel } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -75,13 +75,11 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps, lastCur
     if (n) setAmt(c !== 'KRW' ? fmtDec(String(n)) : fmtInt(String(Math.round(n))));
   };
 
-  // 통화가 하나면 '외화 ¥ / 원화 ₩', 여럿이면 통화 코드로만 구분한다.
-  // 코드에 심볼을 덧붙이면 CHF처럼 둘이 같은 통화가 'CHF CHF'로 겹친다.
-  // 심볼은 바로 아래 금액 칸 라벨에 이미 있다.
+  // 통화가 하나면 '외화 ¥ / 원화 ₩', 여럿이면 코드에 심볼을 괄호로 붙인다.
   const multi = curList.length > 1;
   const curOptions = [
-    ...curList.map(c => ({ value: c.code, label: multi ? c.code : `외화 ${c.sym}` })),
-    { value: 'KRW', label: multi ? 'KRW' : '원화 ₩' },
+    ...curList.map(c => ({ value: c.code, label: multi ? currencyLabel(c.code, c.sym) : `외화 ${c.sym}` })),
+    { value: 'KRW', label: multi ? currencyLabel('KRW', '₩') : '원화 ₩' },
   ];
   const payOptions = PAY_METHODS.map(m => ({ value: m, label: m }));
 

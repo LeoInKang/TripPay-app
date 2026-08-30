@@ -6,6 +6,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import { RECEIPT_PROMPT, parseAiJson } from '../receiptPrompt';
 import { tripCurrencies } from '../currency';
+import { PAY_CARD } from '../constants';
 import { migrateTripData } from '../migrate';
 import { listTrips, loadTripData, saveTripData, setCurrentTripId } from '../storage';
 
@@ -64,9 +65,13 @@ export default function ImportAIScreen({ navigation, route }) {
       setTarget(targetTripId); // 지출 탭에서 온 경우: 현재 여행 고정
       return;
     }
-    // 기본 대상: 통화가 맞는 가장 최근 여행, 없으면 새 여행
-    const code = data.trip?.country?.code;
-    const match = trips.find(t => t.country?.code === code);
+    // 기본 대상: 묶음의 통화를 모두 가진 가장 최근 여행, 없으면 새 여행
+    const fb = data.trip?.country?.code || '';
+    const codes = [...new Set((data.expenses || []).map(e => (e && e.cur) || fb).filter(Boolean))];
+    const match = trips.find(t => {
+      const tc = tripCurrencies(t).map(c => c.code);
+      return codes.every(c => tc.includes(c));
+    });
     setTarget(match ? match.id : '__new__');
   };
 
@@ -81,12 +86,33 @@ export default function ImportAIScreen({ navigation, route }) {
   };
 
   const fxCount  = bundle ? (bundle.expenses || []).length : 0;
+  // 영수증만으로는 트래블카드인지 신용카드인지 알 수 없어 AI는 카드 결제를 모두
+  // 트래블카드로 넣는다(프롬프트 3번). 잘못 들어오면 차감처가 달라지므로 미리 알린다.
+  const cardCount = bundle ? (bundle.expenses || []).filter(e => e && e.pay === PAY_CARD).length : 0;
   const krwCount = bundle ? (bundle.krwExps  || []).length : 0;
   const fxSum    = bundle ? (bundle.expenses || []).reduce((s, e) => s + (e.amt || 0), 0) : 0;
   const krwSum   = bundle ? (bundle.krwExps  || []).reduce((s, e) => s + (e.amt || 0), 0) : 0;
-  const sym      = bundle?.trip?.country?.sym || '';
-  const code     = bundle?.trip?.country?.code || '';
   const fmt      = (n) => n.toLocaleString('ko-KR');
+
+  // 묶음에 든 외화 통화들. 지출마다 cur 를 적어 오면 여러 통화가 한 묶음에 담긴다.
+  // 안 적어 온 옛 형식은 trip.country 를 그 통화로 본다.
+  const bundleCurs = bundle ? tripCurrencies(bundle.trip) : [];
+  const fallbackCode = bundle?.trip?.country?.code || '';
+  const usedCodes = bundle
+    ? [...new Set((bundle.expenses || []).map(e => (e && e.cur) || fallbackCode).filter(Boolean))]
+    : [];
+  const symOf = (c) => ((bundleCurs.find(x => x.code === c) || bundle?.trip?.country || {}).sym || c);
+  // 한 통화뿐이면 예전처럼 그 통화의 심볼로 합계를 보여 준다
+  const sym = usedCodes.length === 1 ? symOf(usedCodes[0]) : '';
+  const code = usedCodes.length === 1 ? usedCodes[0] : '';
+  // 통화가 섞이면 합계를 하나로 낼 수 없다. 통화별로 끊어 보여 준다.
+  const fxByCur = usedCodes.map(c => ({
+    code: c,
+    sym: symOf(c),
+    sum: (bundle?.expenses || [])
+      .filter(e => ((e && e.cur) || fallbackCode) === c)
+      .reduce((s, e) => s + (e.amt || 0), 0),
+  }));
 
   const doImport = async () => {
     if (!bundle || !target || busy) return;
@@ -94,6 +120,9 @@ export default function ImportAIScreen({ navigation, route }) {
     try {
       const now = Date.now();
       const stamp = (list, offset) => (list || []).map((e, i) => ({ ...e, id: now + offset + i }));
+      // 지출에 통화를 적어 둔다. 이미 적혀 있으면 그대로 두고, 없으면 묶음의 여행 통화를 쓴다.
+      // 생략하면 통화가 안 적힌 옛 기록과 구별되지 않는다.
+      const stampFx = (list) => list.map(e => (e.cur ? e : (fallbackCode ? { ...e, cur: fallbackCode } : e)));
       const newFx  = stamp(bundle.expenses, 0);
       const newKrw = stamp(bundle.krwExps, 100000);
       const newIds = [...newFx, ...newKrw].map(e => e.id);
@@ -102,10 +131,16 @@ export default function ImportAIScreen({ navigation, route }) {
         const trip = { ...bundle.trip };
         if (!trip.id || trips.some(t => t.id === trip.id)) trip.id = 'trip_' + now;
         trip.importedBatches = [bundle.batchId];
+        // 묶음에 여러 통화가 들어 있으면 그 나라를 모두 담아 다통화 여행으로 만든다.
+        // 안 그러면 나중에 설정에서 나라를 하나씩 더해야 나머지 지출을 넣을 수 있다.
+        if (!Array.isArray(trip.countries) || !trip.countries.length) {
+          trip.countries = bundleCurs.length ? bundleCurs : (trip.country ? [trip.country] : []);
+        }
+        if (!trip.homeCode && trip.countries.length) trip.homeCode = trip.countries[0].code;
         const data = {
           trip,
           deposits: [], charges: [], exchanges: [], atms: [], refunds: [],
-          expenses: newFx,
+          expenses: stampFx(newFx),
           krwExps:  newKrw,
         };
         await saveTripData(trip.id, data);
@@ -117,15 +152,15 @@ export default function ImportAIScreen({ navigation, route }) {
       const data = await loadTripData(target);
       if (!data || !data.trip) { notify('여행을 불러오지 못했어요.'); return; }
 
-      // 다통화 여행이면 그 통화가 목록에 있으면 받는다.
-      const targetCurs = tripCurrencies(data.trip);
-      if (fxCount > 0 && !targetCurs.some(c => c.code === code)) {
-        const have = targetCurs.map(c => c.code).join(', ') || '?';
-        notify(`통화가 달라요. 이 묶음은 ${code}인데 선택한 여행의 통화는 ${have}예요.\n설정에서 ${code}를 추가하거나 같은 통화의 여행을 골라 주세요.`);
+      // 묶음에 든 통화가 모두 그 여행에 있어야 받는다. 하나라도 없으면 어느 것이 없는지 알린다.
+      const targetCodes = tripCurrencies(data.trip).map(c => c.code);
+      const missing = usedCodes.filter(c => !targetCodes.includes(c));
+      if (fxCount > 0 && missing.length) {
+        const have = targetCodes.join(', ') || '?';
+        notify(`이 여행에 없는 통화가 있어요: ${missing.join(', ')}\n여행의 통화는 ${have}예요.\n설정 → 여행 국가에서 그 나라를 추가하거나, 다른 여행을 골라 주세요.`);
         return;
       }
-      // 지출에 통화를 적어 둔다. 생략하면 통화가 안 적힌 옛 기록과 구별되지 않는다.
-      const stampedFx = code ? newFx.map(e => ({ ...e, cur: code })) : newFx;
+      const stampedFx = stampFx(newFx);
       const batches = data.trip.importedBatches || [];
       if (batches.includes(bundle.batchId)) {
         notify('이미 추가된 묶음이에요. 같은 결과를 두 번 넣지 않도록 막았어요.');
@@ -215,14 +250,24 @@ export default function ImportAIScreen({ navigation, route }) {
               {bundle.trip?.country?.flag} {bundle.trip?.name || '이름 없는 여행'}
             </Text>
             <Text style={styles.previewSum}>
-              {fxCount > 0 ? `외화 지출 ${fxCount}건 · ${sym}${fmt(fxSum)}` : ''}
+              {fxCount > 0
+                ? `외화 지출 ${fxCount}건 · ` + fxByCur.map(c => `${c.sym}${fmt(c.sum)}`).join(' · ')
+                : ''}
               {fxCount > 0 && krwCount > 0 ? '  ·  ' : ''}
               {krwCount > 0 ? `원화 지출 ${krwCount}건 · ₩${fmt(krwSum)}` : ''}
             </Text>
 
+            {cardCount > 0 && (
+              <Text style={styles.payNote}>
+                카드 결제 {cardCount}건은 트래블카드로 넣었어요.{'\n'}
+                신용카드로 낸 건은 추가한 뒤 내역에서 바꿔 주세요.
+              </Text>
+            )}
+
             {targetTripId ? (() => {
               const t = trips.find(x => x.id === targetTripId);
-              const mismatch = t && fxCount > 0 && t.country?.code !== code;
+              const mismatch = t && fxCount > 0
+                && !usedCodes.every(c => tripCurrencies(t).map(x => x.code).includes(c));
               return (
                 <View style={[styles.pickRow, styles.pickRowSel]}>
                   <Text style={[styles.pickText, styles.pickTextSel]}>
@@ -235,7 +280,10 @@ export default function ImportAIScreen({ navigation, route }) {
             <>
             <Text style={styles.pickLabel}>어느 여행에 넣을까요?</Text>
             {trips.map(t => {
-              const codeMatch = t.country?.code === code;
+              // 묶음의 통화가 모두 그 여행에 있어야 맞는 것이다.
+              // 목록 메타에 countries 가 없는 옛 여행은 country 하나로 본다.
+              const tCodes = tripCurrencies(t).map(c => c.code);
+              const codeMatch = usedCodes.every(c => tCodes.includes(c));
               const sel = target === t.id;
               return (
                 <TouchableOpacity key={t.id} style={[styles.pickRow, sel && styles.pickRowSel]} onPress={() => setTarget(t.id)}>
@@ -267,10 +315,8 @@ export default function ImportAIScreen({ navigation, route }) {
             >
               <Text style={styles.btnText}>{busy ? '추가하는 중…' : `지출 ${fxCount + krwCount}건 추가하기`}</Text>
             </TouchableOpacity>
-            <Text style={styles.hint}>
-              분담은 전원 균등, 카드 결제는 트래블카드로 들어가요.
-              영수증만으로는 신용카드를 구분할 수 없으니, 신용카드로 낸 건은 내역에서 바꿔 주세요.
-            </Text>
+            {/* 결제수단 안내는 위 주황 칸이 건수까지 알려 준다 — 여기서 되풀이하지 않는다 */}
+            <Text style={styles.hint}>분담은 전원 균등으로 들어가요.</Text>
           </View>
         )}
 
@@ -315,7 +361,8 @@ const styles = StyleSheet.create({
   },
 
   previewTitle: { fontSize: 16, fontWeight: '800', color: '#1a1a1a' },
-  previewSum: { fontSize: 13, color: '#3a3a3a', marginTop: 4, marginBottom: 12 },
+  previewSum: { fontSize: 13, color: '#3a3a3a', marginTop: 4, marginBottom: 8 },
+  payNote: { fontSize: 11, color: '#8a5a06', backgroundColor: '#FAEEDA', borderRadius: 8, padding: 8, marginBottom: 12 },
   pickLabel: { fontSize: 12, fontWeight: '600', color: '#6b6b6b', marginBottom: 6 },
   pickRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',

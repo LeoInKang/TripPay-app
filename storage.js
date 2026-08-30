@@ -15,6 +15,9 @@ export async function saveTripData(tripId, data) {
       id: tripId,
       name: data?.trip?.name || '',
       country: data?.trip?.country || null,
+      // 다통화 여행을 목록만 보고 판별할 수 있어야 한다 (AI 가져오기의 통화 대조).
+      // 옛 목록에는 없으므로 읽는 쪽이 country 로 폴백한다.
+      countries: data?.trip?.countries || null,
       startDate: data?.trip?.startDate || '',
       endDate: data?.trip?.endDate || '',
       members: data?.trip?.members || [],

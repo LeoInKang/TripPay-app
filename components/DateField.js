@@ -4,17 +4,23 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 거래 날짜(MM-DD)를 다루는 달력 입력 (연도 미저장)
-export default function DateField({ label, value, onChange, placeholder = '날짜 선택' }) {
+//
+// fallback: 아직 고른 날짜가 없을 때 달력을 열 위치 (MM-DD). 보통 그 목록에 마지막으로
+//   넣은 기록의 날짜, 없으면 여행 시작일을 넘긴다.
+// year: 달력에 쓸 연도. 지난 여행을 나중에 기록할 때 올해로 열리면 매번 몇 달을 넘겨야 한다.
+//   저장 형식은 MM-DD 그대로고, 달력이 열리는 위치만 바뀐다.
+export default function DateField({ label, value, onChange, placeholder = '날짜 선택', fallback, year }) {
   // 안드로이드 내비게이션 바(제스처·3버튼)가 하단 버튼을 덮지 않게 실측 여백을 더한다.
   const insets = useSafeAreaInsets();
   const sheetPad = Math.max(24, insets.bottom + 8);
   const [show, setShow] = useState(false);
   const [temp, setTemp] = useState(null);
 
+  const yr = Number(year) || new Date().getFullYear();
   const toDate = (v) => {
-    if (!v) return new Date();
-    const yr = new Date().getFullYear();
-    const [m, d] = v.split('-').map(Number);
+    const src = v || fallback;
+    if (!src) return new Date();
+    const [m, d] = String(src).split('-').map(Number);
     return new Date(yr, (m || 1) - 1, d || 1);
   };
   const fromDate = (d) => {
@@ -32,7 +38,7 @@ export default function DateField({ label, value, onChange, placeholder = '날�
         {label && <Text style={styles.label}>{label}</Text>}
         <input
           type="date"
-          value={value ? `${new Date().getFullYear()}-${value}` : ''}
+          value={value ? `${yr}-${value}` : ''}
           onChange={(e) => {
             const v = e.target.value;
             if (!v) return onChange('');

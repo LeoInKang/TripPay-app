@@ -6,7 +6,7 @@ import {
 import DateField from '../../components/DateField';
 import CurrencyPicker from '../../components/CurrencyPicker';
 import { fmtInt, fmtDec, decOnly, toNum, trimDec } from '../../format';
-import { tripCurrencies, defaultCode, codeOfRecord, currencyLabel } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfRecord, currencyLabel, dateHint } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -329,7 +329,7 @@ function ChargeForm({ trip, lastCur, setLastCur, charges, setCharges, editItem, 
           <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
-          <DateField label="날짜" value={date} onChange={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip, charges)} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -419,7 +419,7 @@ function ExchangeForm({ trip, lastCur, setLastCur, exchanges, setExchanges, edit
           <TextInput style={styles.input} placeholder={rateHint} keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
-          <DateField label="날짜" value={date} onChange={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip, exchanges)} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -487,7 +487,7 @@ function AtmForm({ trip, lastCur, setLastCur, atms, setAtms, editItem, onDone })
           <TextInput style={styles.input} placeholder="0" keyboardType="decimal-pad" value={local} onChangeText={v => setLocal(fmtDec(v))} />
         </View>
         <View style={styles.col}>
-          <DateField label="날짜" value={date} onChange={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip, atms)} />
         </View>
       </View>
       <View style={styles.formRow}>
@@ -574,7 +574,7 @@ function RefundForm({ trip, lastCur, setLastCur, refunds, setRefunds, editItem, 
           <TextInput style={styles.input} placeholder="자동" keyboardType="decimal-pad" value={rate} onChangeText={v => fx.edit('rate', v)} />
         </View>
         <View style={styles.col}>
-          <DateField label="날짜" value={date} onChange={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip, refunds)} />
         </View>
       </View>
       <View style={styles.formRow}>

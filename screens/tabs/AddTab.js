@@ -9,7 +9,7 @@ import DateField   from '../../components/DateField';
 import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, defaultCode, currencyLabel } from '../../currency';
+import { tripCurrencies, defaultCode, currencyLabel, dateHint } from '../../currency';
 
 function notify(msg) {
   if (Platform.OS === 'web') {
@@ -125,7 +125,7 @@ function ExpenseForm({ trip, expenses, krwExps, setExpenses, setKrwExps, lastCur
       {/* 1줄: 날짜 | 항목명 */}
       <View style={styles.formRow}>
         <View style={[styles.col, { flex: 0.48 }]}>
-          <DateField label="날짜" value={date} onChange={setDate} />
+          <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip, expenses, krwExps)} />
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>항목명</Text>

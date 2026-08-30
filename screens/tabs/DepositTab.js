@@ -7,7 +7,7 @@ import BottomSheet from '../../components/BottomSheet';
 import CurrencyPicker from '../../components/CurrencyPicker';
 import DateField   from '../../components/DateField';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, defaultCode, codeOfDeposit, currencyLabel } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfDeposit, currencyLabel, dateHint } from '../../currency';
 import { getAvgRates } from '../../settle';
 
 function notify(msg) {
@@ -205,7 +205,7 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
         {/* 날짜(캘린더) | 메모 */}
         <View style={styles.formRow}>
           <View style={styles.col}>
-            <DateField label="날짜" value={date} onChange={setDate} />
+            <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip, deposits)} />
           </View>
           <View style={styles.col}>
             <Text style={styles.label}>메모</Text>

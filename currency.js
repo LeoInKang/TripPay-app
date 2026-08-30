@@ -102,3 +102,16 @@ export function currencyHasData(trip, code, data = {}) {
   return used(expenses) || used(charges) || used(exchanges) || used(atms) || used(refunds)
     || deposits.some(d => codeOfDeposit(d, trip) === code);
 }
+
+// 날짜 칸이 처음 열릴 위치. 지난 여행을 나중에 기록할 때 달력이 오늘로 열리면
+// 매번 몇 달을 되돌려야 한다. 그 목록에 마지막으로 넣은 기록의 날짜를 쓰고,
+// 없으면 여행 시작일로 연다. → { fallback: 'MM-DD', year: 2024 }
+export function dateHint(trip, ...lists) {
+  const start = (trip && trip.startDate) || '';           // 'YYYY-MM-DD'
+  const year = start ? Number(start.slice(0, 4)) : undefined;
+  for (const list of lists) {
+    const last = Array.isArray(list) && list.length ? list[list.length - 1] : null;
+    if (last && last.date) return { fallback: last.date, year };
+  }
+  return { fallback: start ? start.slice(5) : undefined, year };
+}

@@ -13,7 +13,7 @@ import SplitEditor, { splitErrorMessage } from '../../components/SplitEditor';
 import { PAY_METHODS, PAY_CREDIT } from '../../constants';
 import { getAvgRate, makeToKrw, expenseKrw } from '../../settle';
 import { fmtInt, fmtDec, toNum } from '../../format';
-import { tripCurrencies, defaultCode, codeOfRecord, currencyLabel } from '../../currency';
+import { tripCurrencies, defaultCode, codeOfRecord, currencyLabel, dateHint } from '../../currency';
 
 export default function ListTab({ trip, charges = [], exchanges = [], expenses, krwExps, setExpenses, setKrwExps, highlightIds = [] }) {
   const [filterDate, setFilterDate] = useState('all');
@@ -346,7 +346,7 @@ function EditExpenseModal({ item, trip, sym, payMethods, members, onClose, onSav
             {/* 1줄: 날짜 | 항목명 */}
             <View style={styles.formRow}>
               <View style={[styles.col, { flex: 0.48 }]}>
-                <DateField label="날짜" value={date} onChange={setDate} />
+                <DateField label="날짜" value={date} onChange={setDate} {...dateHint(trip)} />
               </View>
               <View style={styles.col}>
                 <Text style={styles.labelTop}>항목명</Text>

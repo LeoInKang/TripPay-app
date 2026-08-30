@@ -14,7 +14,13 @@ TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전
 - UI 언어는 **한국어 전용**. 통화 기준은 항상 **원화(KRW)**.
 
 ## 현재 상태 (2026-08-30 기준)
-- **★ v11(versionCode 11, 1.2.5) 내부 테스트 게시 완료**(2026-08-30 오전 10:15). 커밋 `3c3d5b6` 기준.
+- **★ v12(versionCode 12, 1.2.6) 내부 테스트 게시 완료**(2026-08-30 오후 7:47). 커밋 `2dad29c` 기준.
+  내용: **글꼴 확대 대응 전면**(로고·탭·잔액·환율이 잘리던 문제) · **날짜 달력이 여행 날짜에서 열림** ·
+  평균환율 출처 표시(충전·환전 N건 평균 / 참고 환율).
+  `.aab` https://expo.dev/artifacts/eas/vyvmVyURWyApGehTCi1_Yyi6s39mF7frDiajuIpn5CQ.aab
+  큰누나 피드백 4건이 출처다 — 평균환율이 안 보임(실은 글꼴 확대로 잘린 것) · 기본환율이 뭔지 모르겠다 ·
+  분담방식 안내가 잘림 · 과거 날짜 입력이 번거롭다.
+- v11(versionCode 11, 1.2.5) 내부 테스트 게시(2026-08-30 오전 10:15). 커밋 `3c3d5b6` 기준.
   내용: **바텀시트 하단 버튼이 안드로이드 내비게이션 바에 잘리던 문제 수정**(갤럭시 실측 제보).
   `.aab` https://expo.dev/artifacts/eas/-uR1I7uk_spqrgZXw4j6Hp20sIA76lrDsXFnDZF3HUI.aab
 - v10(versionCode 10, 1.2.4) 내부 테스트 게시(2026-08-30 오전 12:45). 커밋 `deae4bc` 기준.
@@ -85,7 +91,7 @@ screens/
 components/          BottomSheet · Segment · CurrencyPicker(통화 선택) · ReorderList(드래그 정렬) ·
                      DateField(월일) · FullDateField(연월일) · CountryPicker(다중 선택) · SplitEditor
 settle.js            ★ 개인별 정산 엔진 (유일한 정산 로직 단일 출처)
-currency.js          ★ 여행의 통화 목록 단일 출처 (tripCountries·tripCurrencies·codeOfRecord·currencyLabel)
+currency.js          ★ 여행의 통화 목록 단일 출처 (tripCountries·tripCurrencies·codeOfRecord·currencyLabel·dateHint)
 balances.js          ★ 잔액 계산 단일 출처 (통화별 카드·현금 + 원화 계좌)
 format.js            금액 입력 표기 (fmtInt 원화 · fmtDec 외화 · toNum · trimDec). 화면 공용, 로컬 복제 금지
 storage.js           AsyncStorage CRUD (trippay:trips / trippay:currentTripId / trippay:trip:{id})
@@ -125,6 +131,9 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
    - 계산은 **`settle.js`의 `getAvgRates(trip, charges, exchanges)` 하나만** 쓴다. 화면에서 다시 계산하지 말 것(Home·Settle·Deposit 세 탭이 제각각 계산하다 숫자가 어긋난 전례).
    - 환산은 `makeToKrwMulti(trip, charges, exchanges)` → `(금액, 통화코드)`. 구버전 `makeToKrw(rate, r100)`은 둘째 인자를 무시하므로 **둘을 바꿔 끼워도 화면이 안 깨진다**(그 덕에 탭을 하나씩 옮길 수 있었다).
    - 충전·환전이 **그 통화에 0건이면 그 통화의 `exRate`(국가 기본환율)로 폴백**한다. 폴백이 없으면 외화 회비가 0원으로 계산돼 순액이 뒤집힌다(회귀 테스트 14번).
+   - **정산 탭은 그 환율이 어디서 나왔는지 밝힌다** — `충전·환전 3건 평균` / `충전·환전 1건` / `참고 환율`(폴백).
+     숫자만 보여 주면 "내가 아는 환율과 다르다"가 된다(큰누나 제보). `exRate`는 2026-08-04에 손으로 넣은
+     어림값이고 갱신된 적이 없다 — 유로권은 전부 1500이다.
 3. **r100 통화**(JPY·VND·IDR·LAK·KHR·MMK·MNT·UZS·ARS·CLP): 환율이 100단위 고시 → 환산 시 `/100`. 신규 국가 추가 시 `r100` 판단을 반드시 확인할 것.
 4. **반올림 잔여는 참여자에게 순환 배정**(`rotation`) → 부담 합계 = 지출액 정확히 일치, 특정인에게 1원이 계속 몰리지 않음. `fixed`는 사용자가 넣은 값 그대로 유지(보정 안 함).
 5. **합계를 맞춰야 저장된다 — 고정액·비율 공통 규칙.** 검증은 `SplitEditor`의 `splitErrorMessage`가 하고, 실제 판정은 `settle.js`의 `checkFixedSplit`(합계 = 지출액) · `checkRatioSplit`(합계 = 100%)이 한다. 저장을 막는 곳은 AddTab 외화·원화 폼, ListTab 수정 모달 **3곳**. 편집기가 접혀 있어도 보이도록 헤드에 부족·초과 배지를 띄운다.
@@ -227,6 +236,15 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
 - **안드로이드가 iOS보다 더 크게 키울 수 있다.** iOS에서 멀쩡해도 갤럭시에서 깨질 수 있다.
 - **웹 미리보기로는 절대 못 잡는다** — 브라우저에 OS 글꼴 배율이 적용되지 않는다.
   아이폰은 설정 → 손쉬운 사용 → 디스플레이 및 텍스트 크기, 안드로이드는 설정 → 디스플레이 → 글자 크기.
+
+## 날짜 입력 (2026-08-30, 큰누나 제보)
+날짜는 **MM-DD만 저장**한다(연도 미저장). 달력을 열 때 연도를 어디선가 만들어 내야 하는데,
+예전에는 늘 올해를 썼다. 2024년 여행을 2026년에 기록하면 매번 스무 달을 되돌려야 했다.
+
+- 달력이 열리는 위치는 `currency.dateHint(trip, ...목록)`이 정한다 →
+  **그 목록에 마지막으로 넣은 기록의 날짜 → 여행 시작일 → 오늘** 순.
+- 연도도 `trip.startDate`의 연도를 쓴다. **저장 형식은 그대로 MM-DD다** — 달력이 여는 위치만 바뀐다.
+- 쓰는 곳은 회비·지출·내역 수정·충전/환전 네 폼(충전·환전·ATM·잔액이전은 각자 자기 목록을 넘긴다).
 
 ## 알려진 부채·주의
 - 잔액 계산 중복은 **2026-08-30에 `balances.js`로 통일 완료**(그 전까지 HomeTab·SettleTab이 같은 20여 줄을 각자 들고 있었다). avgRate는 2026-08-04에 `getAvgRate`로 먼저 통일했다.

@@ -14,7 +14,10 @@ TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전
 - UI 언어는 **한국어 전용**. 통화 기준은 항상 **원화(KRW)**.
 
 ## 현재 상태 (2026-08-30 기준)
-- **★ v10(versionCode 10, 1.2.4) 내부 테스트 게시 완료**(2026-08-30 오전 12:45). 커밋 `deae4bc` 기준.
+- **★ v11(versionCode 11, 1.2.5) 내부 테스트 게시 완료**(2026-08-30 오전 10:15). 커밋 `3c3d5b6` 기준.
+  내용: **바텀시트 하단 버튼이 안드로이드 내비게이션 바에 잘리던 문제 수정**(갤럭시 실측 제보).
+  `.aab` https://expo.dev/artifacts/eas/-uR1I7uk_spqrgZXw4j6Hp20sIA76lrDsXFnDZF3HUI.aab
+- v10(versionCode 10, 1.2.4) 내부 테스트 게시(2026-08-30 오전 12:45). 커밋 `deae4bc` 기준.
   내용: **다통화 여행** · 새 여행에 직전 여행 기록이 복사되던 버그 수정 · 국가 드래그 정렬 · 통화 표기 전면 정리.
   `.aab` https://expo.dev/artifacts/eas/b26zlmu-SK2FL7t8S2avHk7TpcdjeEYjS6rTn7i8zgs.aab
   큰누나(`hl5jso58@gmail.com`)가 내부 테스터. **테스터 목록에 있어도 참여 링크에서 한 번은 수락해야 받는다** —
@@ -203,6 +206,10 @@ play_assets/         스토어 스크린샷·아이콘·피처 그래픽
   (드래그로 키보드가 닫혀 불편하다는 피드백 — 빈 곳 탭으로만 닫히게 둔다).
 - **하단 버튼은 `useSafeAreaInsets()`로 여백을 잡는다.** `react-native-safe-area-context`가 설치만 되고
   안 쓰이던 탓에 안드로이드 제스처 바에 버튼이 잘렸다. `App.js`에 `SafeAreaProvider`가 있어야 동작한다.
+  **바텀시트도 같다** — 2026-08-30에 네 개(BottomSheet·CountryPicker·DateField·FullDateField)가 전부
+  `paddingBottom`을 고정값으로 박아 둔 탓에 갤럭시에서 「완료」·「취소」가 반쯤 잘려 있었다.
+  `paddingBottom: Math.max(기존값, insets.bottom + 8)`로 잡는다. 새 시트를 만들 때도 이대로 할 것.
+  웹 미리보기는 `insets.bottom`이 0이라 이 문제가 **재현되지 않는다** — 실기기로만 확인된다.
 - 미해결: 아이폰 국가 선택 모달에서 목록을 스크롤하면 키보드가 닫힌다. 웹에서 재현되지 않아 iOS
   네이티브 거동으로 판단. `react-native-keyboard-controller` 도입 시 함께 검토.
 

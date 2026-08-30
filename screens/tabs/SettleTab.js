@@ -14,16 +14,26 @@ function notify(msg) {
 
 // 잔액 한 줄 + 인당 값. 통화가 하나면 종전 모양 그대로, 여럿이면 통화 코드를 앞에 붙인다.
 // 코드를 붙일 때는 심볼을 빼서 'CHF CHF0'처럼 겹치지 않게 한다 (현황 탭과 같은 모양).
+// 글꼴을 키우면 코드와 금액이 서로 밀어내 잘린다 — 현황 탭 CurLine 주석 참조.
 function BalLine({ c, value, n, multi }) {
   const color = value < 0 ? '#E24B4A' : '#1D9E75';
   const sym = multi ? '' : c.sym;
   return (
     <View style={multi ? styles.balLineMulti : null}>
       <View style={styles.balLineTop}>
-        {multi && <Text style={styles.balCode}>{c.code}</Text>}
-        <Text style={[styles.subValue, { color }]}>{sym}{value.toLocaleString('ko-KR')}</Text>
+        {multi && <Text style={styles.balCode} numberOfLines={1}>{c.code}</Text>}
+        <Text
+          style={[styles.subValue, styles.balAmt, { color }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          {sym}{value.toLocaleString('ko-KR')}
+        </Text>
       </View>
-      <Text style={[styles.subPer, multi && styles.subPerRight]}>인당 {sym}{Math.round(value / n).toLocaleString('ko-KR')}</Text>
+      <Text style={[styles.subPer, multi && styles.subPerRight]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+        인당 {sym}{Math.round(value / n).toLocaleString('ko-KR')}
+      </Text>
     </View>
   );
 }
@@ -174,19 +184,21 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
         </View>
       )}
 
-      {/* 여행 경비 요약 */}
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>여행 경비 요약</Text>
+      {/* 여행 경비 요약 — 카드로 감싸지 않는다.
+          바깥 카드(padding 14) 안에 잔액 카드(padding 10)를 넣으면 폭이 두 번 깎여
+          현황 탭보다 28px 좁아지고, 글꼴을 키우면 「트래블카드 잔액」이 두 줄로 접힌다. */}
+      <View style={styles.summary}>
+        <Text style={styles.summaryTitle}>여행 경비 요약</Text>
 
         {/* 1줄: 총 입금 / 총 지출 */}
         <View style={styles.row2}>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>총 입금 (원화환산)</Text>
-            <Text style={styles.subValueLg}>{totalDeposit.toLocaleString('ko-KR')}원</Text>
+            <Text style={styles.subValueLg} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{totalDeposit.toLocaleString('ko-KR')}원</Text>
           </View>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>총 지출 (원화환산)</Text>
-            <Text style={[styles.subValueLg, { color: '#E24B4A' }]}>
+            <Text style={[styles.subValueLg, { color: '#E24B4A' }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
               {totalExpKrw.toLocaleString('ko-KR')}원
             </Text>
           </View>
@@ -197,10 +209,15 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>계좌 잔액</Text>
             {/* 계좌는 원화뿐이라 '0원'으로 적는다 (현황 탭과 같은 모양) */}
-            <Text style={[styles.subValue, { color: acctBal < 0 ? '#E24B4A' : '#1D9E75' }]}>
+            <Text
+              style={[styles.subValue, { color: acctBal < 0 ? '#E24B4A' : '#1D9E75' }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
               {acctBal.toLocaleString('ko-KR')}원
             </Text>
-            <Text style={styles.subPer}>인당 {perAcct.toLocaleString('ko-KR')}원</Text>
+            <Text style={styles.subPer} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>인당 {perAcct.toLocaleString('ko-KR')}원</Text>
           </View>
           <View style={styles.subCard}>
             <Text style={styles.subLabel}>트래블카드 잔액</Text>
@@ -286,7 +303,8 @@ const styles = StyleSheet.create({
   balLineMulti: { marginTop: 4 },
   // 코드는 왼쪽, 금액은 오른쪽 (현황 탭의 잔액 줄과 같은 정렬)
   balLineTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 6 },
-  balCode: { fontSize: 11, color: '#6b6b6b' },
+  balCode: { fontSize: 11, color: '#6b6b6b', flexShrink: 1 },
+  balAmt: { flexShrink: 1, textAlign: 'right' },
   container: { flex: 1, backgroundColor: '#f0eee8' },
   content: { padding: 12, paddingBottom: 32 },
 
@@ -330,11 +348,16 @@ const styles = StyleSheet.create({
 
   // 잔액 카드 2열 레이아웃
   row2: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  // 껍데기 없이 제목만 두고 카드를 바로 놓는다 (현황 탭과 같은 폭)
+  summary: { marginBottom: 12 },
+  summaryTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 8 },
   subCard: {
     flex: 1,
-    backgroundColor: '#f8f7f3',
+    backgroundColor: '#fff',
     borderRadius: 10,
     padding: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.08)',
   },
   subLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },
   subValue: { fontSize: 14, fontWeight: '700', color: '#1a1a1a' },

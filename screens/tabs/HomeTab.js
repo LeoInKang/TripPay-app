@@ -5,19 +5,36 @@ import { computeBalances } from '../../balances';
 import { currencyOf, codeOfRecord, codeOfDeposit } from '../../currency';
 
 // 잔액 한 줄. 통화가 하나면 종전처럼 금액만, 여럿이면 통화 코드를 앞에 붙인다.
+//
+// 휴대폰 글꼴을 키우면 코드와 금액이 서로 밀어내 'EUR'이 'EUI'로, '-36'이 '-3('로 잘렸다
+// (아이폰 최대 글꼴 실측). 한 줄에 둘을 나란히 두는 자리는 전부 같은 처리가 필요하다 —
+// 각 칸에 flexShrink 를 주고, 금액은 줄이 바뀌지 않게 한 줄로 묶은 뒤 폭이 모자라면
+// 글자를 조금 줄여 그린다. 잘려서 못 읽는 것보다 작게 읽히는 편이 낫다.
 function CurLine({ c, value, multi }) {
   const neg = value < 0;
   if (!multi) {
     return (
-      <Text style={[styles.balValue, styles.balPos, neg && styles.balNeg]}>
+      <Text
+        style={[styles.balValue, styles.balPos, neg && styles.balNeg]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
         {c.sym}{value.toLocaleString('ko-KR')}
       </Text>
     );
   }
   return (
     <View style={styles.curLine}>
-      <Text style={styles.curCode}>{c.code}</Text>
-      <Text style={[styles.balValue, styles.balPos, neg && styles.balNeg]}>{value.toLocaleString('ko-KR')}</Text>
+      <Text style={styles.curCode} numberOfLines={1}>{c.code}</Text>
+      <Text
+        style={[styles.balValue, styles.balPos, neg && styles.balNeg, styles.curAmt]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {value.toLocaleString('ko-KR')}
+      </Text>
     </View>
   );
 }
@@ -67,14 +84,14 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
       <View style={styles.sumRow}>
         <View style={[styles.sumCard, { flex: 1 }]}>
           <Text style={styles.balLabel}>총 입금 (원화환산)</Text>
-          <Text style={styles.sumValue}>{totalDepKrw.toLocaleString('ko-KR')}원</Text>
+          <Text style={styles.sumValue} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{totalDepKrw.toLocaleString('ko-KR')}원</Text>
           <Text style={styles.balSub}>{deposits.length}건</Text>
         </View>
         <View style={[styles.sumCard, { flex: 1 }]}>
           <Text style={styles.balLabel}>총 지출 (원화환산)</Text>
           {/* 원화를 주 숫자로 두고 외화 합계는 부제로 내린다 (정산 탭과 같은 기준).
               통화가 여럿이면 외화끼리 더할 수 없으므로 부제를 생략한다. */}
-          <Text style={[styles.sumValue, styles.sumValueOut]}>{totalExpKrw.toLocaleString('ko-KR')}원</Text>
+          <Text style={[styles.sumValue, styles.sumValueOut]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{totalExpKrw.toLocaleString('ko-KR')}원</Text>
           <Text style={styles.balSub}>
             {multi
               ? `통화 ${byCurrency.length}종`
@@ -87,7 +104,7 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
       <View style={styles.balRow}>
         <View style={styles.balCard}>
           <Text style={styles.balLabel}>계좌 잔액</Text>
-          <Text style={[styles.balValue, styles.balPos, acctBal < 0 && styles.balNeg]}>{acctBal.toLocaleString('ko-KR')}원</Text>
+          <Text style={[styles.balValue, styles.balPos, acctBal < 0 && styles.balNeg]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{acctBal.toLocaleString('ko-KR')}원</Text>
           <Text style={styles.balSub}>충전가능</Text>
         </View>
         <View style={styles.balCard}>
@@ -223,7 +240,8 @@ const styles = StyleSheet.create({
   balPos: { color: '#1D9E75' },
   balNeg: { color: '#E24B4A' },
   curLine: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: 6, marginTop: 2 },
-  curCode: { fontSize: 10, color: '#6b6b6b' },
+  curCode: { fontSize: 10, color: '#6b6b6b', flexShrink: 1 },
+  curAmt: { flexShrink: 1, textAlign: 'right' },
   sumRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   sumCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' },
   // 정산 탭의 같은 카드와 크기를 맞춘다

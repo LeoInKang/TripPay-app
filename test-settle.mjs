@@ -1,4 +1,5 @@
 import { computeSettlement, getAvgRate, getAvgRates, checkFixedSplit, checkRatioSplit, normalizeRatio, expenseKrw, makeToKrw, makeToKrwMulti } from './settle.js';
+import { migrateTripData } from './migrate.js';
 
 let pass = 0, fail = 0;
 function eq(label, got, exp) {
@@ -394,6 +395,53 @@ eq('16 금액 미입력은 통과', checkFixedSplit({ participants: ['A'], split
     toKrw: makeToKrwMulti(flipped, [], []),
     expenses: [{ name: '옛 기록', amt: 100, participants: parts }] });
   eq('24 순서를 바꿔도 그대로', after.perMember[0].owed, bare.perMember[0].owed);
+}
+
+// 25) 마이그레이션이 통화를 적어 넣어도 정산 결과가 바뀌지 않는다.
+//     한 번 적으면 되돌릴 수 없으므로 이 등식이 깨지면 데이터가 조용히 틀어진다.
+{
+  const CHF = { name: '스위스', code: 'CHF', sym: 'CHF', r100: false, exRate: '1560' };
+  const EUR = { name: '이탈리아', code: 'EUR', sym: '€', r100: false, exRate: '1500' };
+  const trip = { country: CHF, countries: [CHF, EUR], homeCode: 'CHF', members: ['A', 'B'] };
+  const parts = ['A', 'B'];
+
+  // 구버전 모양: 지출·충전은 cur 없음, 회비는 cur 없음(=원화)과 'LOCAL'(=기준 통화)이 섞여 있다
+  const before = {
+    trip,
+    deposits: [
+      { mem: 'A', amt: 300000 },                 // cur 없음 → 원화
+      { mem: 'B', cur: 'LOCAL', amt: 100 },      // 구버전 외화 → CHF
+      { mem: 'A', cur: 'EUR', amt: 50 },
+    ],
+    charges:   [{ rate: 1500, local: 100, krw: 150000 }],   // cur 없음 → CHF
+    exchanges: [], atms: [], refunds: [],
+    expenses: [
+      { name: '옛 지출', amt: 100, participants: parts },     // cur 없음 → CHF
+      { name: '새 지출', amt: 40, cur: 'EUR', participants: parts },
+    ],
+    krwExps: [{ name: '원화 지출', amt: 50000, participants: parts }],
+  };
+  const after = migrateTripData(JSON.parse(JSON.stringify(before)));
+
+  const settle = (d) => {
+    const toKrw = makeToKrwMulti(d.trip, d.charges, d.exchanges);
+    const r = computeSettlement({
+      members: parts, trip: d.trip, toKrw,
+      deposits: d.deposits, expenses: d.expenses, krwExps: d.krwExps,
+    });
+    return r.perMember.map((p) => `${p.name}:${p.paidIn}/${p.owed}/${p.net}`).join(' ');
+  };
+
+  eq('25 마이그레이션 전후 정산 동일', settle(after), settle(before));
+  eq('25 cur 없던 지출에 기준 통화가 적힘', after.expenses[0].cur, 'CHF');
+  eq('25 cur 없던 충전에도 적힘', after.charges[0].cur, 'CHF');
+  eq('25 cur 없던 회비는 원화로 적힘', after.deposits[0].cur, 'KRW');
+  eq("25 'LOCAL' 회비는 기준 통화로", after.deposits[1].cur, 'CHF');
+  eq('25 이미 적힌 값은 그대로', after.expenses[1].cur, 'EUR');
+
+  // 기준 통화를 못 정하는 데이터는 손대지 않는다
+  const bare = { trip: { members: ['A'] }, expenses: [{ name: 'x', amt: 1 }] };
+  eq('25 기준 통화 없으면 안 적음', migrateTripData(bare).expenses[0].cur, undefined);
 }
 
 console.log(`\n== ${pass} passed, ${fail} failed ==`);

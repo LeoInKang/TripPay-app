@@ -8,7 +8,7 @@
 //   현금       → 그 통화의 현금 잔액
 //   신용카드   → 계좌 (통화 무관, 확정 원화가 있으면 그 금액)
 
-import { PAY_CASH, PAY_CREDIT } from './constants';
+import { PAY_CASH, PAY_CREDIT } from './constants.js';
 import { tripCurrencies, codeOfRecord, codeOfDeposit } from './currency.js';
 import { expenseKrw } from './settle.js';
 

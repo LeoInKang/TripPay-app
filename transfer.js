@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
-import { migrateTripData } from './migrate';
+import { migrateTripData } from './migrate.js';
 
 // 여행 데이터 -> JSON 문자열
 export function buildTripJson(data) {

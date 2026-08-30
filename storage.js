@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { migrateTripData } from './migrate';
+import { migrateTripData } from './migrate.js';
 
 const KEY_INDEX   = 'trippay:trips';
 const KEY_CURRENT = 'trippay:currentTripId';

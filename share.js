@@ -1,4 +1,5 @@
 import { Platform, Share } from 'react-native';
+import { tripCurrencies } from './currency.js';
 import { gcm } from '@noble/ciphers/aes.js';
 import { utf8ToBytes } from '@noble/ciphers/utils.js';
 import * as Crypto from 'expo-crypto';
@@ -33,7 +34,9 @@ function toB64url(bytes) {
 // country 와 balance 의 avgRate·cardBal·cashBal 은 주 통화 기준으로 계속 채운다 —
 // 뷰어가 아직 옛 버전일 때도 단일 통화 여행은 그대로 보이게 하기 위해서다.
 export function buildSharePayload({ trip, deposits, expenses, krwExps, balance }) {
-  const list = (trip?.currencies && trip.currencies.length ? trip.currencies : [trip?.country]).filter(Boolean);
+  // 통화 목록은 반드시 tripCurrencies 로 읽는다. trip.currencies 는 마이그레이션이
+  // 대표 국가 하나로 채우는 옛 필드라, 그걸 직접 보면 다통화 여행에서 통화가 하나만 나간다.
+  const list = tripCurrencies(trip);
   const primary = list[0] || {};
   const byCur = balance?.byCurrency || [];
   const first = byCur[0] || {};

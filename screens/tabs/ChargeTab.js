@@ -262,7 +262,7 @@ function ChargeForm({ trip, lastCur, setLastCur, charges, setCharges, editItem, 
   const c = useFormCurrency(trip, lastCur, setLastCur);
   const { sym, r100 } = c;
   const rateHint = c.exRate
-    ? `예: ${c.exRate} (${r100 ? '100' : '1'}${sym} = ${c.exRate}원)`
+    ? `예: ${c.exRate}`   // 괄호 설명은 칸을 넘겨 잘린다 — 단위는 바로 위 라벨이 말해 준다
     : '환율';
   const fx = useFxTriple(r100);
   const { krw, local, rate } = fx;
@@ -352,7 +352,7 @@ function ExchangeForm({ trip, lastCur, setLastCur, exchanges, setExchanges, edit
   const c = useFormCurrency(trip, lastCur, setLastCur);
   const { sym, r100 } = c;
   const rateHint = c.exRate
-    ? `예: ${c.exRate} (${r100 ? '100' : '1'}${sym} = ${c.exRate}원)`
+    ? `예: ${c.exRate}`   // 괄호 설명은 칸을 넘겨 잘린다 — 단위는 바로 위 라벨이 말해 준다
     : '환율';
   const fx = useFxTriple(r100);
   const { krw, local, rate } = fx;
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   cardTitle: { fontSize: 15, fontWeight: '700', color: '#1a1a1a', marginBottom: 12 },
   cancelEdit: { fontSize: 13, color: '#378ADD', fontWeight: '600', marginBottom: 12 },
-  helpText: { fontSize: 11, color: '#9b9b9b', marginBottom: 12, lineHeight: 16 },
+  helpText: { fontSize: 11, color: '#9b9b9b', marginBottom: 12 },
 
   formRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   col: { flex: 1 },

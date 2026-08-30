@@ -155,7 +155,8 @@ export default function SplitEditor({ members, value, onChange, sym = '₩', amo
                         onChangeText={(t) => setVal(m, t)}
                         placeholder={mode === 'fixed' ? '0' : '0'}
                       />
-                      <Text style={styles.valUnit}>{mode === 'fixed' ? sym : '%'}</Text>
+                      {/* 글꼴을 키우면 'CHF'가 'C / HF'로 접힌다 */}
+                      <Text style={styles.valUnit} numberOfLines={1}>{mode === 'fixed' ? sym : '%'}</Text>
                     </View>
                   ) : (!on ? <Text style={styles.dash}>—</Text> : null)}
                 </View>
@@ -191,15 +192,24 @@ export default function SplitEditor({ members, value, onChange, sym = '₩', amo
               </Text>
             )}
           </View>
+          {/* 안내는 모드마다 다르게 준다. 한 문장이 세 줄을 넘으면 마지막 줄이 잘리므로
+              줄바꿈을 직접 넣어 각 줄을 짧게 유지한다(글꼴을 키운 기기에서 실측). */}
           <Text style={styles.hint}>
-            {mode === 'equal' ? '체크한 사람끼리 똑같이 나눠요.'
-              : mode === 'ratio' ? '각자 비율(%)을 넣어요. 합계가 100%여야 저장할 수 있어요. 배수로 넣고(2·1·1) 100%로 맞추기를 눌러도 돼요.'
-              : '각자 낼 금액을 직접 넣어요. 합계가 지출액과 같아야 저장할 수 있어요.'}
+            {mode === 'equal'
+              ? '체크한 사람끼리 똑같이 나눠요.'
+              : mode === 'ratio'
+                ? <>각자 몫을 %로 넣어요. 합계가 100%여야 저장돼요.{'\n'}
+                    배수(2·1·1)로 넣고 「100%로 맞추기」를 눌러도 돼요.</>
+                : <>각자 낼 금액을 직접 넣어요.{'\n'}
+                    합계가 지출액과 같아야 저장돼요.</>}
           </Text>
-          <Text style={styles.hint}>
-            일부만 공금에서 부담하려면 지출을 두 건으로 나눠 입력하세요.{'\n'}
-            예: 그린피 60,000(A·B만) + 공용비 40,000(전원)
-          </Text>
+          {/* 균등에서만 안내한다. 비율·고정액은 이 화면에서 바로 조절할 수 있다. */}
+          {mode === 'equal' && (
+            <Text style={styles.hint}>
+              일부만 공금에서 부담하려면 지출을 두 건으로 나눠 입력하세요.{'\n'}
+              예: 그린피 60,000(A·B만) + 공용비 40,000(전원)
+            </Text>
+          )}
         </View>
       )}
     </View>
@@ -236,7 +246,8 @@ const styles = StyleSheet.create({
   rowSub: { fontSize: 11, color: '#9b9b9b', marginTop: 2 },
   valWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   valInput: { width: 60, textAlign: 'right', borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 5, fontSize: 13 },
-  valUnit: { fontSize: 12, color: '#9b9b9b', width: 22 },
+  // 폭을 22로 고정해 두면 글꼴을 키웠을 때 'CHF'가 안 들어가 접힌다. 내용에 맞춰 늘어나게 둔다.
+  valUnit: { fontSize: 12, color: '#9b9b9b', minWidth: 22, flexShrink: 0 },
   dash: { fontSize: 13, color: '#c9c9c9' },
   preview: { marginTop: 10, backgroundColor: '#f8f7f3', borderRadius: 8, paddingVertical: 9, paddingHorizontal: 11 },
   previewRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
@@ -245,5 +256,6 @@ const styles = StyleSheet.create({
   previewText: { fontSize: 13, fontWeight: '600', color: '#1a1a1a' },
   ok: { color: '#1D9E75' },
   warn: { color: '#BA7517' },
-  hint: { fontSize: 11, color: '#9b9b9b', marginTop: 8, lineHeight: 15 },
+  // 오른쪽에 여유를 두지 않으면 줄 끝 글자가 폭 경계에 걸려 반만 그려진다
+  hint: { fontSize: 11, color: '#9b9b9b', marginTop: 8, paddingRight: 4 },
 });

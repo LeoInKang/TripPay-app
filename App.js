@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   logoText: { fontSize: 48, fontWeight: '800', marginBottom: 16 },
   logoTrip: { color: '#ffffff', fontSize: 48, fontWeight: '800' },
   logoPay: { color: '#64b4ff', fontSize: 48, fontWeight: '800' },
-  tagline: { color: 'rgba(255,255,255,0.75)', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  tagline: { color: 'rgba(255,255,255,0.75)', fontSize: 15, textAlign: 'center' },
   buttonSection: { width: '100%', gap: 12 },
   btnPrimary: { backgroundColor: '#ffffff', borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
   btnPrimaryText: { color: '#1a3a5c', fontSize: 16, fontWeight: '700' },

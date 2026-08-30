@@ -32,7 +32,12 @@ export default function CurrencyPicker({ label, value, options, onChange }) {
               onPress={() => onChange(v)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.text, on && styles.textOn]} numberOfLines={1}>{l}</Text>
+              <Text
+                style={[styles.text, on && styles.textOn]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >{l}</Text>
             </TouchableOpacity>
           );
         })}

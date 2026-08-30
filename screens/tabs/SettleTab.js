@@ -309,9 +309,9 @@ const styles = StyleSheet.create({
   content: { padding: 12, paddingBottom: 32 },
 
   warnBanner: { backgroundColor: '#fce4e4', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 0.5, borderColor: '#f0b8b8' },
-  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600', lineHeight: 17 },
+  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600' },
   noticeBanner: { backgroundColor: '#FAEEDA', borderRadius: 10, padding: 10, marginBottom: 12, borderWidth: 0.5, borderColor: '#e8d3a8' },
-  noticeText: { fontSize: 12, color: '#633806', lineHeight: 17 },
+  noticeText: { fontSize: 12, color: '#633806' },
 
   // 공유 버튼 (그라데이션 효과를 위해 배경색 적용)
   shareBtn: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   },
   shareInfoText: { fontSize: 12, color: '#6b6b6b', flex: 1 },
   revokeBtn: { fontSize: 12, color: '#c0413f', fontWeight: '700', marginLeft: 8 },
-  shareHint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: -4, marginBottom: 12, paddingHorizontal: 2 },
+  shareHint: { fontSize: 11, color: '#9b9b9b', marginTop: -4, marginBottom: 12, paddingHorizontal: 2 },
 
   card: {
     backgroundColor: '#fff',
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   avatarText: { fontWeight: '700', fontSize: 14 },
   memberInfo: { flex: 1, marginRight: 8 },
   memberName: { fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginBottom: 2 },
-  memberSub: { fontSize: 10, color: '#9b9b9b', lineHeight: 14 },
+  memberSub: { fontSize: 10, color: '#9b9b9b' },
   refundBadge: { backgroundColor: '#E1F5EE', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
   refundText: { fontSize: 12, fontWeight: '700', color: '#085041' },
   oweBadge: { backgroundColor: '#FCEBEB' },
@@ -409,5 +409,5 @@ const styles = StyleSheet.create({
   rateText: { fontSize: 12, color: '#6b6b6b' },
   rateDefault: { color: '#BA7517', fontWeight: '600' },
   rateReal: { color: '#9b9b9b' },
-  rateHint: { fontSize: 11, color: '#9b9b9b', marginTop: 8, lineHeight: 16 },
+  rateHint: { fontSize: 11, color: '#9b9b9b', marginTop: 8 },
 });

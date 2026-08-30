@@ -105,7 +105,8 @@ export default function HomeTab({ trip, deposits, charges, exchanges, atms, refu
         <View style={styles.balCard}>
           <Text style={styles.balLabel}>계좌 잔액</Text>
           <Text style={[styles.balValue, styles.balPos, acctBal < 0 && styles.balNeg]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{acctBal.toLocaleString('ko-KR')}원</Text>
-          <Text style={styles.balSub}>충전가능</Text>
+          {/* 잔액이 없거나 마이너스면 '충전가능'은 사실과 어긋난다 */}
+          <Text style={styles.balSub}>{acctBal > 0 ? '충전가능' : '충전 불가'}</Text>
         </View>
         <View style={styles.balCard}>
           <Text style={styles.balLabel}>트래블카드 잔액</Text>
@@ -230,7 +231,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { padding: 12, paddingBottom: 32 },
   warnBanner: { backgroundColor: '#fce4e4', borderRadius: 10, padding: 10, marginBottom: 8, borderWidth: 0.5, borderColor: '#f0b8b8' },
-  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600', lineHeight: 16 },
+  warnText: { fontSize: 12, color: '#c0413f', fontWeight: '600' },
   balRow: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   balCard: { flex: 1, backgroundColor: '#fff', borderRadius: 10, padding: 10, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)' },
   balLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },

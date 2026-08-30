@@ -193,21 +193,21 @@ const styles = StyleSheet.create({
 
   row: { marginBottom: 10 },
   rowLabel: { fontSize: 13, fontWeight: '700', color: '#1a3a5c', marginBottom: 2 },
-  rowBody: { fontSize: 13, color: '#3a3a3a', lineHeight: 19 },
+  rowBody: { fontSize: 13, color: '#3a3a3a' },
 
-  p: { fontSize: 13, color: '#3a3a3a', lineHeight: 20, marginBottom: 8 },
-  pSub: { fontSize: 12, color: '#6b6b6b', lineHeight: 17 },
+  p: { fontSize: 13, color: '#3a3a3a', marginBottom: 8 },
+  pSub: { fontSize: 12, color: '#6b6b6b' },
   b: { fontWeight: '700', color: '#1a1a1a' },
 
   sectionHead: { fontSize: 14, fontWeight: '700', color: '#1a1a1a', marginTop: 12, marginBottom: 8, borderBottomWidth: 2, borderBottomColor: '#378ADD', alignSelf: 'flex-start', paddingBottom: 2 },
 
   tipBox: { backgroundColor: '#f8f7f3', borderRadius: 8, padding: 10, marginTop: 4 },
-  tipText: { fontSize: 12, color: '#5f5e5a', lineHeight: 17 },
+  tipText: { fontSize: 12, color: '#5f5e5a' },
 
   exBox: { backgroundColor: '#f8f7f3', borderRadius: 8, padding: 10, marginBottom: 8 },
-  exText: { fontSize: 13, color: '#1a1a1a', lineHeight: 20 },
+  exText: { fontSize: 13, color: '#1a1a1a' },
 
   ruleBox: { backgroundColor: '#FAEEDA', borderRadius: 8, padding: 12, marginBottom: 4 },
-  ruleText: { fontSize: 13, color: '#633806', lineHeight: 19, marginBottom: 6 },
+  ruleText: { fontSize: 13, color: '#633806', marginBottom: 6 },
 
 });

@@ -361,7 +361,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: { fontSize: 11, color: '#9b9b9b', marginBottom: 4 },
   infoValue: { fontSize: 14, color: '#1a1a1a', fontWeight: '600' },
-  infoHint: { fontSize: 11, color: '#9b9b9b', marginTop: 6, lineHeight: 16 },
+  infoHint: { fontSize: 11, color: '#9b9b9b', marginTop: 6 },
 
   curName: { fontSize: 14, color: '#1a1a1a', fontWeight: '600', flex: 1 },
   curCode: { fontSize: 12, color: '#9b9b9b', marginRight: 10 },

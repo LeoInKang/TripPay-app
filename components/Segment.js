@@ -29,7 +29,14 @@ export default function Segment({ label, value, options, onChange }) {
               onPress={() => onChange(v)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.text, isSel && styles.textSel]}>{l}</Text>
+              {/* 글꼴을 키우면 '트래블카드'가 '트래블카 / 드'로 접힌다.
+                  칸이 좁으면 접지 말고 글자를 조금 줄여 그린다. */}
+              <Text
+                style={[styles.text, isSel && styles.textSel]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}
+              >{l}</Text>
             </TouchableOpacity>
           );
         })}

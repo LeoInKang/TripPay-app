@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 14,
   },
-  modalHint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: 4 },
+  modalHint: { fontSize: 11, color: '#9b9b9b', marginTop: 4 },
   formRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   col: { flex: 1 },
   labelTop: { fontSize: 11, fontWeight: '600', color: '#6b6b6b', marginBottom: 4 },

@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 14,
   },
-  hint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: 4 },
+  hint: { fontSize: 11, color: '#9b9b9b', marginTop: 4 },
 
   addBtn: {
     backgroundColor: '#1a1a1a',

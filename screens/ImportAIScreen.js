@@ -300,13 +300,13 @@ const styles = StyleSheet.create({
     borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.08)',
   },
   previewCard: { borderColor: '#378ADD', borderWidth: 1 },
-  step: { fontSize: 13, fontWeight: '700', color: '#1a3a5c', marginBottom: 10, lineHeight: 19 },
+  step: { fontSize: 13, fontWeight: '700', color: '#1a3a5c', marginBottom: 10 },
 
   btn: { backgroundColor: '#1a3a5c', borderRadius: 10, paddingVertical: 13, alignItems: 'center' },
   btnBlue: { backgroundColor: '#378ADD' },
   btnDark: { backgroundColor: '#1a1a1a', marginTop: 12 },
   btnText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-  hint: { fontSize: 11, color: '#9b9b9b', lineHeight: 16, marginTop: 8 },
+  hint: { fontSize: 11, color: '#9b9b9b', marginTop: 8 },
   manualLink: { fontSize: 12, color: '#378ADD', fontWeight: '600', textAlign: 'center', marginTop: 10 },
   manualInput: {
     borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.2)', borderRadius: 8,

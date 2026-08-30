@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   field: { marginBottom: 16 },
   row: { flexDirection: 'row', marginBottom: 0 },
   label: { fontSize: 13, fontWeight: '600', color: '#6b6b6b', marginBottom: 6 },
-  hint: { fontSize: 11, color: '#9b9b9b', marginTop: 8, lineHeight: 16 },
+  hint: { fontSize: 11, color: '#9b9b9b', marginTop: 8 },
 
   // overflow:hidden 을 주면 끌어올린 행이 상자 밖에서 잘린다
   curBox: {

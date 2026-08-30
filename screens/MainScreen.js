@@ -169,26 +169,29 @@ export default function MainScreen({ route, navigation }) {
       {/* 상단 헤더: TripPay | 설정 | 히스토리 | 홈 */}
       <View style={styles.topBar}>
         <View style={styles.topBarLeft}>
-          <Text style={styles.brandText}>
+          {/* 브랜드 표기는 시스템 글꼴 배율을 따르지 않는다.
+              따르게 두면 오른쪽 버튼들이 넓어지면서 로고 자리를 밀어내
+              'Tr / ip / Pa / y' 로 쪼개진다(아이폰 최대 글꼴 실측). */}
+          <Text style={styles.brandText} allowFontScaling={false} numberOfLines={1}>
             <Text style={styles.brandTrip}>Trip</Text>
             <Text style={styles.brandPay}>Pay</Text>
           </Text>
         </View>
         <View style={styles.topBarRight}>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Help')}>
-            <Text style={styles.iconBtnText}>❓ 도움말</Text>
+            <Text style={styles.iconBtnText} numberOfLines={1} allowFontScaling={false}>❓ 도움말</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('Settings', { trip, deposits, charges, exchanges, atms, refunds, expenses, krwExps, onSave: handleTripSave })}>
-            <Text style={styles.iconBtnText}>⚙ 설정</Text>
+            <Text style={styles.iconBtnText} numberOfLines={1} allowFontScaling={false}>⚙ 설정</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.navigate('History')}>
-            <Text style={styles.iconBtnText}>📋 히스토리</Text>
+            <Text style={styles.iconBtnText} numberOfLines={1} allowFontScaling={false}>📋 히스토리</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.iconBtn}
             onPress={goHome}
           >
-            <Text style={styles.iconBtnText}>🏠 홈</Text>
+            <Text style={styles.iconBtnText} numberOfLines={1} allowFontScaling={false}>🏠 홈</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -217,8 +220,14 @@ export default function MainScreen({ route, navigation }) {
             style={[styles.tabItem, activeTab === t.id && styles.tabItemActive]}
             onPress={() => setActiveTab(t.id)}
           >
-            <Text style={styles.tabIcon}>{t.icon}</Text>
-            <Text style={[styles.tabLabel, activeTab === t.id && styles.tabLabelActive]}>
+            {/* 탭은 크기를 고정한다. 글꼴을 키우면 여섯 개가 화면을 넘어
+                마지막 '정산' 이 밖으로 밀려나 안 보인다. */}
+            <Text style={styles.tabIcon} allowFontScaling={false}>{t.icon}</Text>
+            <Text
+              style={[styles.tabLabel, activeTab === t.id && styles.tabLabelActive]}
+              allowFontScaling={false}
+              numberOfLines={1}
+            >
               {t.label}
             </Text>
           </TouchableOpacity>
@@ -250,13 +259,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: '#f0eee8',
   },
-  topBarLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  topBarRight: { flexDirection: 'row', gap: 6 },
+  // 로고 자리는 줄지 않게 두고, 넘치면 오른쪽 버튼들이 줄어든다
+  topBarLeft: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
+  topBarRight: { flexDirection: 'row', gap: 6, flexShrink: 1, justifyContent: 'flex-end' },
   brandText: { fontSize: 18, fontWeight: '800' },
   brandTrip: { color: '#1a3a5c' },
   brandPay:  { color: '#378ADD' },
   brandDot:  { color: '#9b9b9b', fontSize: 14 },
   tripTitle: { fontSize: 16, fontWeight: '700', color: '#1a1a1a', marginBottom: 4 },
+  // 헤더 버튼도 로고와 함께 글꼴 배율을 따르지 않는다.
+  // 1.2배로 제한해 봤지만 그래도 버튼이 넓어져 로고의 'y'를 덮었다 (아이폰 최대 글꼴 실측).
+  // 아이콘이 함께 있어 글자가 작아도 무엇인지 알아볼 수 있다.
   iconBtn: {
     backgroundColor: '#fff',
     borderRadius: 20,

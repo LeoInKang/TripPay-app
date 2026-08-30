@@ -63,7 +63,7 @@ export default function DateField({ label, value, onChange, placeholder = '날�
       <View>
         {label && <Text style={styles.label}>{label}</Text>}
         <TouchableOpacity style={styles.field} onPress={open} activeOpacity={0.7}>
-          <Text style={[styles.value, !value && styles.placeholder]}>📅 {display}</Text>
+          <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>📅 {display}</Text>
         </TouchableOpacity>
         <Modal visible={show} transparent animationType="slide" onRequestClose={() => setShow(false)}>
           <Pressable style={styles.backdrop} onPress={() => setShow(false)}>
@@ -97,7 +97,7 @@ export default function DateField({ label, value, onChange, placeholder = '날�
     <View>
       {label && <Text style={styles.label}>{label}</Text>}
       <TouchableOpacity style={styles.field} onPress={() => setShow(true)} activeOpacity={0.7}>
-        <Text style={[styles.value, !value && styles.placeholder]}>📅 {display}</Text>
+        <Text style={[styles.value, !value && styles.placeholder]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>📅 {display}</Text>
       </TouchableOpacity>
       {show && (
         <DateTimePicker

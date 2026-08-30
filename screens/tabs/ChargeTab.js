@@ -176,7 +176,7 @@ export default function ChargeTab({
 
       {/* 전체 내역 */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>충전 / 환전 / ATM / 계좌이전 내역</Text>
+        <Text style={styles.cardTitle}>충전·환전·ATM·계좌이전 내역</Text>
         {charges.length + exchanges.length + atms.length + refunds.length === 0 ? (
           <Text style={styles.empty}>없습니다</Text>
         ) : (

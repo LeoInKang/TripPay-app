@@ -74,9 +74,6 @@ export default function DepositTab({ trip, deposits, setDeposits, charges = [], 
   const handleSubmit = () => {
     if (!member) return notify('참석자를 선택해 주세요.');
     if (!amount) return notify('회비 금액을 입력해 주세요.');
-    if (currency !== 'KRW' && avgRate <= 0) {
-      return notify('평균환율이 아직 없어요. 충전/환전을 먼저 입력하거나 원화로 납부해 주세요.');
-    }
     if (!date) return notify('날짜를 선택해 주세요.');
     const a = currency !== 'KRW' ? toNum(amount) : Math.round(toNum(amount));
     const k = currency === 'KRW' ? a : toKrwLocal(a);

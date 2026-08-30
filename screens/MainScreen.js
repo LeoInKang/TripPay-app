@@ -15,7 +15,7 @@ import { saveTripData, setCurrentTripId, clearCurrentTripId } from '../storage';
 const TABS = [
   { id: 'home',    icon: '🏠', label: '현황' },
   { id: 'deposit', icon: '💰', label: '회비' },
-  { id: 'charge',  icon: '💳', label: '충전/환전' },
+  { id: 'charge',  icon: '💳', label: '충전·환전' },
   { id: 'add',     icon: '➕', label: '지출' },
   { id: 'list',    icon: '📋', label: '내역' },
   { id: 'settle',  icon: '🧾', label: '정산' },

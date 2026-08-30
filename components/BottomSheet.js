@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, StyleSheet,
-  Pressable, ScrollView, Dimensions, Platform
+  Pressable, ScrollView, Dimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 /**
  * BottomSheet - 아래에서 슬라이드 업하는 선택 시트
@@ -24,6 +25,9 @@ export default function BottomSheet({
   placeholder = '선택',
   title,
 }) {
+  // 안드로이드 내비게이션 바(제스처·3버튼)가 하단 버튼을 덮지 않게 실측 여백을 더한다.
+  const insets = useSafeAreaInsets();
+  const sheetPad = Math.max(16, insets.bottom + 8);
   const [open, setOpen] = useState(false);
 
   const selected = options.find(o => (o.value ?? o) === value);
@@ -50,7 +54,7 @@ export default function BottomSheet({
         onRequestClose={() => setOpen(false)}
       >
         <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+          <Pressable style={[styles.sheet, { paddingBottom: sheetPad }]} onPress={() => {}}>
             {/* 핸들 바 */}
             <View style={styles.handle} />
 
@@ -124,7 +128,6 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 8,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     paddingHorizontal: 16,
     maxHeight: '70%',
   },

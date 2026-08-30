@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Platform, StyleSheet, Modal, Pressable } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 거래 날짜(MM-DD)를 다루는 달력 입력 (연도 미저장)
 export default function DateField({ label, value, onChange, placeholder = '날짜 선택' }) {
+  // 안드로이드 내비게이션 바(제스처·3버튼)가 하단 버튼을 덮지 않게 실측 여백을 더한다.
+  const insets = useSafeAreaInsets();
+  const sheetPad = Math.max(24, insets.bottom + 8);
   const [show, setShow] = useState(false);
   const [temp, setTemp] = useState(null);
 
@@ -63,7 +67,7 @@ export default function DateField({ label, value, onChange, placeholder = '날�
         </TouchableOpacity>
         <Modal visible={show} transparent animationType="slide" onRequestClose={() => setShow(false)}>
           <Pressable style={styles.backdrop} onPress={() => setShow(false)}>
-            <Pressable style={styles.sheet} onPress={() => {}}>
+            <Pressable style={[styles.sheet, { paddingBottom: sheetPad }]} onPress={() => {}}>
               <View style={styles.sheetHeader}>
                 <TouchableOpacity onPress={() => setShow(false)}>
                   <Text style={styles.cancelBtn}>취소</Text>
@@ -128,7 +132,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingBottom: 24,
     paddingHorizontal: 8,
   },
   sheetHeader: {

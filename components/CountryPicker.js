@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Modal, Pressable, ScrollView, Platform
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import KeyboardAvoider from './KeyboardAvoider';
 import { COUNTRIES, REGIONS, searchCountries } from '../countries';
 
@@ -14,6 +15,9 @@ export default function CountryPicker({
   onClose,              // 바로 열기로 썼을 때 닫힘 알림
   title = '여행 국가 선택',
 }) {
+  // 안드로이드 내비게이션 바(제스처·3버튼)가 하단 버튼을 덮지 않게 실측 여백을 더한다.
+  const insets = useSafeAreaInsets();
+  const sheetPad = Math.max(12, insets.bottom + 8);
   const [open, setOpen] = useState(!!openNow);
   const [q, setQ] = useState('');
 
@@ -51,7 +55,7 @@ export default function CountryPicker({
         {/* 검색창이 키보드에 가리지 않도록 모달 안에서 감싼다 (Modal은 별도 뷰 계층) */}
         <KeyboardAvoider style={{ flex: 1 }}>
         <Pressable style={styles.backdrop} onPress={close}>
-          <Pressable style={styles.sheet} onPress={() => {}}>
+          <Pressable style={[styles.sheet, { paddingBottom: sheetPad }]} onPress={() => {}}>
             <View style={styles.handle} />
             <Text style={styles.sheetTitle}>{title}</Text>
 
@@ -140,7 +144,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     paddingTop: 8, paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 24 : 12,
     maxHeight: '85%',
   },
   handle: { width: 40, height: 4, borderRadius: 2, backgroundColor: '#e0e0e0', alignSelf: 'center', marginBottom: 12 },

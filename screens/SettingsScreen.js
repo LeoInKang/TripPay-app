@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ScrollView, SafeAreaView, Platform, Alert, StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import KeyboardAvoider from '../components/KeyboardAvoider';
 import DateField from '../components/FullDateField';
 import CountryPicker from '../components/CountryPicker';
@@ -37,6 +38,8 @@ export default function SettingsScreen({ route, navigation }) {
   const [picking, setPicking] = useState(false);
   // 순서를 끄는 동안에는 화면 스크롤을 잠근다 (안 그러면 ScrollView가 터치를 가로챈다)
   const [dragging, setDragging] = useState(false);
+  // 저장 버튼이 안드로이드 내비게이션 바에 걸리지 않게 스크롤 끝 여백을 실측으로 잡는다
+  const insets = useSafeAreaInsets();
   const homeCode = primaryCode(trip);
   const [editIdx,   setEditIdx]   = useState(null);
   const [editName,  setEditName]  = useState('');
@@ -174,7 +177,7 @@ export default function SettingsScreen({ route, navigation }) {
       </View>
 
       <KeyboardAvoider style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" scrollEnabled={!dragging}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: 40 + insets.bottom }]} keyboardShouldPersistTaps="handled" scrollEnabled={!dragging}>
         <View style={styles.field}>
           <Text style={styles.label}>여행명</Text>
           <TextInput

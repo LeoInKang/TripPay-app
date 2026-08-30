@@ -47,13 +47,25 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
   // 인당 분배값은 잔액 카드의 참고 표시용이다. 개인별 정산은 computeSettlement가 한다.
   const perAcct = Math.round(acctBal / N);
 
-  // 통화별 평균환율 안내
+  // 통화별 평균환율 안내.
+  // 그 통화의 충전·환전이 0건이면 실제 환율을 알 길이 없어 국가 기본값(exRate)으로 계산한다.
+  // 숫자만 보여주면 "내가 아는 환율과 다르다"가 되므로, 어디서 나온 값인지 줄마다 밝힌다.
+  // 실거래가 여럿이면 진짜 산술평균이라 '평균'이라고 적고, 한 건이면 그 값 그대로다.
   const rates = getAvgRates(trip, charges, exchanges);
   const rateLines = byCurrency
     .filter(c => (rates[c.code] || 0) > 0)
     // 심볼이 아니라 통화 코드로 적는다 — Kč·zł·Ft 는 한눈에 어느 나라 돈인지 알기 어렵다.
     // '평균 환율'은 카드 제목이 말해 주므로 줄마다 되풀이하지 않는다.
-    .map(c => `${c.cur && c.cur.r100 ? '100' : '1'}${c.code} = ${rates[c.code].toFixed(2)}원`);
+    .map(c => {
+      const n = (c.chargeCount || 0) + (c.exchangeCount || 0);
+      return {
+        code: c.code,
+        text: `${c.cur && c.cur.r100 ? '100' : '1'}${c.code} = ${rates[c.code].toFixed(2)}원`,
+        note: n === 0 ? '참고 환율' : n === 1 ? '충전·환전 1건' : `충전·환전 ${n}건 평균`,
+        isDefault: n === 0,
+      };
+    });
+  const hasDefaultRate = rateLines.some(r => r.isDefault);
 
   // 개인별 정산 (선결제·참여자·분담방식 반영)
   const { perMember } = computeSettlement({ members, deposits, expenses, krwExps, trip, toKrw });
@@ -251,9 +263,18 @@ export default function SettleTab({ trip, setTrip, deposits, charges, exchanges,
       {rateLines.length > 0 && (
         <View style={styles.rateCard}>
           <Text style={styles.rateTitle}>평균 환율</Text>
-          {rateLines.map(line => (
-            <Text key={line} style={styles.rateText}>{line}</Text>
+          {rateLines.map(r => (
+            <Text key={r.code} style={styles.rateText}>
+              {r.text}
+              <Text style={r.isDefault ? styles.rateDefault : styles.rateReal}> · {r.note}</Text>
+            </Text>
           ))}
+          {hasDefaultRate && (
+            <Text style={styles.rateHint}>
+              참고 환율은 앱에 미리 넣어 둔 값이라 실제 시세와 다를 수 있어요.{'\n'}
+              그 통화로 충전이나 환전을 한 건 넣으면 그 환율로 바뀝니다.
+            </Text>
+          )}
         </View>
       )}
 
@@ -360,7 +381,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  rateCard: { backgroundColor: '#fff', borderRadius: 10, padding: 10, alignItems: 'center' },
-  rateTitle: { fontSize: 12, color: '#6b6b6b', fontWeight: '700', marginBottom: 3 },
+  rateCard: { backgroundColor: '#fff', borderRadius: 10, padding: 12 },
+  rateTitle: { fontSize: 12, color: '#6b6b6b', fontWeight: '700', marginBottom: 4 },
   rateText: { fontSize: 12, color: '#6b6b6b' },
+  rateDefault: { color: '#BA7517', fontWeight: '600' },
+  rateReal: { color: '#9b9b9b' },
+  rateHint: { fontSize: 11, color: '#9b9b9b', marginTop: 8, lineHeight: 16 },
 });

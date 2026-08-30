@@ -102,7 +102,7 @@ function LandingScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-        <Text style={styles.version}>TripPay v1.2.6</Text>
+        <Text style={styles.version}>TripPay v1.2.7</Text>
       </ScrollView>
     </SafeAreaView>
   );

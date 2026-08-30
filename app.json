@@ -2,7 +2,7 @@
   "expo": {
     "name": "TripPay",
     "slug": "TripPay",
-    "version": "1.2.6",
+    "version": "1.2.7",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

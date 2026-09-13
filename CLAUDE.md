@@ -14,7 +14,7 @@ TripPay = 단체 여행 공금 관리 앱. 회비 납부 → 카드충전/환전
   **개발자 소개의 실명·주소는 못 숨긴다** — 개인 개발자 계정은 법적 이름이 공개되고, 조직 계정은 사업자등록·D-U-N-S가 필요하다.
 - Expo 계정 `leoinkang` · EAS projectId `3d6bc013-393a-4523-a6da-b69c1013e499`.
 - 리포: GitHub `LeoInKang/TripPay-app` (main) · 작업 폴더 `~/projects/apps/TripPay-app`.
-- 개인정보처리방침: `docs/privacy-policy.html` → `https://leoinkang.github.io/TripPay-app/privacy-policy.html` (Play 제출본, 국문+영문, 문의 fompy98@gmail.com). **고치면 푸시해야 반영된다.**
+- 개인정보처리방침: `docs/privacy-policy.html` → `https://leoinkang.github.io/TripPay-app/privacy-policy.html` (Play 제출본, 국문+영문, 문의 trippay.app@gmail.com — 2026-09-13 교체). **고치면 푸시해야 반영된다.**
 - 공유 서버: Cloudflare Worker `https://trippay.fompy98.workers.dev` (소스 `server/`, KV `SHARES`). 계정 fompy98@gmail.com.
 - UI 언어는 **한국어 전용**. 통화 기준은 항상 **원화(KRW)**.
 
